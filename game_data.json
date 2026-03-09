@@ -1,0 +1,1355 @@
+{
+  "phase": "QUAL_1",
+  "currentQuestionIndex": 3,
+  "isQuestionActive": false,
+  "isQuestionFinished": true,
+  "teams": [
+    {
+      "id": "1e3ff380-9e83-4c25-aa3a-f1f71d02a9d3",
+      "name": "Ggg",
+      "score": 10,
+      "status": "in gara"
+    }
+  ],
+  "selectedAnswers": {},
+  "usedQuestionIds": [
+    "uploaded_1773063672285_1",
+    "uploaded_1773063672285_5",
+    "uploaded_1773063672285_11"
+  ],
+  "buzzes": [],
+  "timer": 0,
+  "timerActive": false,
+  "countdown": 0,
+  "countdownActive": false,
+  "showRoundWinner": false,
+  "round": 1,
+  "questionQueue": [],
+  "uploadedFiles": [
+    "quiz_cultura_generale_100_domande.pdf"
+  ],
+  "allQuestions": {
+    "QUAL_1": [
+      {
+        "text": "Di che colore è il pomodoro?",
+        "options": [
+          "blu",
+          "verde",
+          "nero",
+          "rosso"
+        ],
+        "correctAnswer": 3,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_0",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la capitale della Francia?",
+        "options": [
+          "Madrid",
+          "Parigi",
+          "Berlino",
+          "Lisbona"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_1",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quanti continenti ci sono sulla Terra?",
+        "options": [
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_2",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha dipinto la Gioconda?",
+        "options": [
+          "Van Gogh",
+          "Picasso",
+          "Leonardo da Vinci",
+          "Michelangelo"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_3",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il pianeta più grande del Sistema Solare?",
+        "options": [
+          "Terra",
+          "Giove",
+          "Marte",
+          "Venere"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_4",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "In quale anno è iniziata la Seconda Guerra Mondiale?",
+        "options": [
+          "1914",
+          "1939",
+          "1945",
+          "1929"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_5",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è l'elemento chimico con simbolo O?",
+        "options": [
+          "Oro",
+          "Osmio",
+          "Ossigeno",
+          "Ossido"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_6",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale lingua ha più madrelingua al mondo?",
+        "options": [
+          "Inglese",
+          "Spagnolo",
+          "Hindi",
+          "Mandarino"
+        ],
+        "correctAnswer": 3,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_7",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha scritto 'I Promessi Sposi'?",
+        "options": [
+          "Dante",
+          "Manzoni",
+          "Boccaccio",
+          "Calvino"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_8",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il fiume più lungo tradizionalmente?",
+        "options": [
+          "Nilo",
+          "Amazzonia",
+          "Mississippi",
+          "Danubio"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_9",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la montagna più alta del mondo?",
+        "options": [
+          "K2",
+          "Everest",
+          "Monte Bianco",
+          "Kilimangiaro"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_10",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale gas respirano gli esseri umani?",
+        "options": [
+          "Azoto",
+          "Ossigeno",
+          "CO2",
+          "Idrogeno"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_11",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale paese ha inventato la pizza moderna?",
+        "options": [
+          "Francia",
+          "USA",
+          "Italia",
+          "Grecia"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_12",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha formulato la teoria della relatività?",
+        "options": [
+          "Newton",
+          "Einstein",
+          "Galileo",
+          "Tesla"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_13",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è l'oceano più grande?",
+        "options": [
+          "Atlantico",
+          "Indiano",
+          "Pacifico",
+          "Artico"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_14",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi costruì il Colosseo?",
+        "options": [
+          "Greci",
+          "Romani",
+          "Ottomani",
+          "Persiani"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_15",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la valuta del Giappone?",
+        "options": [
+          "Won",
+          "Yuan",
+          "Yen",
+          "Ringgit"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_16",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha scoperto la penicillina?",
+        "options": [
+          "Fleming",
+          "Pasteur",
+          "Curie",
+          "Darwin"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_17",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale strumento misura i terremoti?",
+        "options": [
+          "Termometro",
+          "Barometro",
+          "Sismografo",
+          "Igrometro"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_18",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il deserto caldo più grande?",
+        "options": [
+          "Sahara",
+          "Gobi",
+          "Kalahari",
+          "Atacama"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_19",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il pianeta più vicino al Sole?",
+        "options": [
+          "Mercurio",
+          "Venere",
+          "Terra",
+          "Marte"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_20",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale animale è il più grande del mondo?",
+        "options": [
+          "Elefante",
+          "Balenottera azzurra",
+          "Squalo",
+          "Giraffa"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_21",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi scrisse la Divina Commedia?",
+        "options": [
+          "Dante",
+          "Petrarca",
+          "Ariosto",
+          "Tasso"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_22",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale metallo ha simbolo Fe?",
+        "options": [
+          "Ferro",
+          "Fluoro",
+          "Francio",
+          "Flerovio"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_23",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quanti giorni ha un anno bisestile?",
+        "options": [
+          "364",
+          "365",
+          "366",
+          "367"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_24",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la capitale della Spagna?",
+        "options": [
+          "Barcellona",
+          "Madrid",
+          "Valencia",
+          "Siviglia"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_25",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale mare bagna Venezia?",
+        "options": [
+          "Tirreno",
+          "Adriatico",
+          "Ionio",
+          "Ligure"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_26",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il continente più grande?",
+        "options": [
+          "Africa",
+          "Europa",
+          "Asia",
+          "America"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_27",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi inventò la lampadina pratica?",
+        "options": [
+          "Edison",
+          "Tesla",
+          "Volta",
+          "Bell"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_28",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il numero dei pianeti nel Sistema Solare?",
+        "options": [
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_29",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la montagna più alta del mondo?",
+        "options": [
+          "K2",
+          "Everest",
+          "Monte Bianco",
+          "Kilimangiaro"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_30",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale gas respirano gli esseri umani?",
+        "options": [
+          "Azoto",
+          "Ossigeno",
+          "CO2",
+          "Idrogeno"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_31",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale paese ha inventato la pizza moderna?",
+        "options": [
+          "Francia",
+          "USA",
+          "Italia",
+          "Grecia"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_32",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha formulato la teoria della relatività?",
+        "options": [
+          "Newton",
+          "Einstein",
+          "Galileo",
+          "Tesla"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_33",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è l'oceano più grande?",
+        "options": [
+          "Atlantico",
+          "Indiano",
+          "Pacifico",
+          "Artico"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_34",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi costruì il Colosseo?",
+        "options": [
+          "Greci",
+          "Romani",
+          "Ottomani",
+          "Persiani"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_35",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la valuta del Giappone?",
+        "options": [
+          "Won",
+          "Yuan",
+          "Yen",
+          "Ringgit"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_36",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha scoperto la penicillina?",
+        "options": [
+          "Fleming",
+          "Pasteur",
+          "Curie",
+          "Darwin"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_37",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale strumento misura i terremoti?",
+        "options": [
+          "Termometro",
+          "Barometro",
+          "Sismografo",
+          "Igrometro"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_38",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il deserto caldo più grande?",
+        "options": [
+          "Sahara",
+          "Gobi",
+          "Kalahari",
+          "Atacama"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_39",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il pianeta più vicino al Sole?",
+        "options": [
+          "Mercurio",
+          "Venere",
+          "Terra",
+          "Marte"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_40",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale animale è il più grande del mondo?",
+        "options": [
+          "Elefante",
+          "Balenottera azzurra",
+          "Squalo",
+          "Giraffa"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_41",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi scrisse la Divina Commedia?",
+        "options": [
+          "Dante",
+          "Petrarca",
+          "Ariosto",
+          "Tasso"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_42",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale metallo ha simbolo Fe?",
+        "options": [
+          "Ferro",
+          "Fluoro",
+          "Francio",
+          "Flerovio"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_43",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quanti giorni ha un anno bisestile?",
+        "options": [
+          "364",
+          "365",
+          "366",
+          "367"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_44",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la capitale della Spagna?",
+        "options": [
+          "Barcellona",
+          "Madrid",
+          "Valencia",
+          "Siviglia"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_45",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale mare bagna Venezia?",
+        "options": [
+          "Tirreno",
+          "Adriatico",
+          "Ionio",
+          "Ligure"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_46",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il continente più grande?",
+        "options": [
+          "Africa",
+          "Europa",
+          "Asia",
+          "America"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_47",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi inventò la lampadina pratica?",
+        "options": [
+          "Edison",
+          "Tesla",
+          "Volta",
+          "Bell"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_48",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il numero dei pianeti nel Sistema Solare?",
+        "options": [
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672285_49",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la montagna più alta del mondo?",
+        "options": [
+          "K2",
+          "Everest",
+          "Monte Bianco",
+          "Kilimangiaro"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_50",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale gas respirano gli esseri umani?",
+        "options": [
+          "Azoto",
+          "Ossigeno",
+          "CO2",
+          "Idrogeno"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_51",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale paese ha inventato la pizza moderna?",
+        "options": [
+          "Francia",
+          "USA",
+          "Italia",
+          "Grecia"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_52",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha formulato la teoria della relatività?",
+        "options": [
+          "Newton",
+          "Einstein",
+          "Galileo",
+          "Tesla"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_53",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è l'oceano più grande?",
+        "options": [
+          "Atlantico",
+          "Indiano",
+          "Pacifico",
+          "Artico"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_54",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi costruì il Colosseo?",
+        "options": [
+          "Greci",
+          "Romani",
+          "Ottomani",
+          "Persiani"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_55",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la valuta del Giappone?",
+        "options": [
+          "Won",
+          "Yuan",
+          "Yen",
+          "Ringgit"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_56",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha scoperto la penicillina?",
+        "options": [
+          "Fleming",
+          "Pasteur",
+          "Curie",
+          "Darwin"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_57",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale strumento misura i terremoti?",
+        "options": [
+          "Termometro",
+          "Barometro",
+          "Sismografo",
+          "Igrometro"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_58",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il deserto caldo più grande?",
+        "options": [
+          "Sahara",
+          "Gobi",
+          "Kalahari",
+          "Atacama"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_59",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il pianeta più vicino al Sole?",
+        "options": [
+          "Mercurio",
+          "Venere",
+          "Terra",
+          "Marte"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_60",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale animale è il più grande del mondo?",
+        "options": [
+          "Elefante",
+          "Balenottera azzurra",
+          "Squalo",
+          "Giraffa"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_61",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi scrisse la Divina Commedia?",
+        "options": [
+          "Dante",
+          "Petrarca",
+          "Ariosto",
+          "Tasso"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_62",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale metallo ha simbolo Fe?",
+        "options": [
+          "Ferro",
+          "Fluoro",
+          "Francio",
+          "Flerovio"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_63",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quanti giorni ha un anno bisestile?",
+        "options": [
+          "364",
+          "365",
+          "366",
+          "367"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_64",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la capitale della Spagna?",
+        "options": [
+          "Barcellona",
+          "Madrid",
+          "Valencia",
+          "Siviglia"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_65",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale mare bagna Venezia?",
+        "options": [
+          "Tirreno",
+          "Adriatico",
+          "Ionio",
+          "Ligure"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_66",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il continente più grande?",
+        "options": [
+          "Africa",
+          "Europa",
+          "Asia",
+          "America"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_67",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi inventò la lampadina pratica?",
+        "options": [
+          "Edison",
+          "Tesla",
+          "Volta",
+          "Bell"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_68",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il numero dei pianeti nel Sistema Solare?",
+        "options": [
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_69",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la montagna più alta del mondo?",
+        "options": [
+          "K2",
+          "Everest",
+          "Monte Bianco",
+          "Kilimangiaro"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_70",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale gas respirano gli esseri umani?",
+        "options": [
+          "Azoto",
+          "Ossigeno",
+          "CO2",
+          "Idrogeno"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_71",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale paese ha inventato la pizza moderna?",
+        "options": [
+          "Francia",
+          "USA",
+          "Italia",
+          "Grecia"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_72",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha formulato la teoria della relatività?",
+        "options": [
+          "Newton",
+          "Einstein",
+          "Galileo",
+          "Tesla"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_73",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è l'oceano più grande?",
+        "options": [
+          "Atlantico",
+          "Indiano",
+          "Pacifico",
+          "Artico"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_74",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi costruì il Colosseo?",
+        "options": [
+          "Greci",
+          "Romani",
+          "Ottomani",
+          "Persiani"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_75",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la valuta del Giappone?",
+        "options": [
+          "Won",
+          "Yuan",
+          "Yen",
+          "Ringgit"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_76",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha scoperto la penicillina?",
+        "options": [
+          "Fleming",
+          "Pasteur",
+          "Curie",
+          "Darwin"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_77",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale strumento misura i terremoti?",
+        "options": [
+          "Termometro",
+          "Barometro",
+          "Sismografo",
+          "Igrometro"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_78",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il deserto caldo più grande?",
+        "options": [
+          "Sahara",
+          "Gobi",
+          "Kalahari",
+          "Atacama"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_79",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il pianeta più vicino al Sole?",
+        "options": [
+          "Mercurio",
+          "Venere",
+          "Terra",
+          "Marte"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_80",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale animale è il più grande del mondo?",
+        "options": [
+          "Elefante",
+          "Balenottera azzurra",
+          "Squalo",
+          "Giraffa"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_81",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi scrisse la Divina Commedia?",
+        "options": [
+          "Dante",
+          "Petrarca",
+          "Ariosto",
+          "Tasso"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_82",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale metallo ha simbolo Fe?",
+        "options": [
+          "Ferro",
+          "Fluoro",
+          "Francio",
+          "Flerovio"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_83",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quanti giorni ha un anno bisestile?",
+        "options": [
+          "364",
+          "365",
+          "366",
+          "367"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_84",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la capitale della Spagna?",
+        "options": [
+          "Barcellona",
+          "Madrid",
+          "Valencia",
+          "Siviglia"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_85",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale mare bagna Venezia?",
+        "options": [
+          "Tirreno",
+          "Adriatico",
+          "Ionio",
+          "Ligure"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_86",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il continente più grande?",
+        "options": [
+          "Africa",
+          "Europa",
+          "Asia",
+          "America"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_87",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi inventò la lampadina pratica?",
+        "options": [
+          "Edison",
+          "Tesla",
+          "Volta",
+          "Bell"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_88",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il numero dei pianeti nel Sistema Solare?",
+        "options": [
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_89",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la montagna più alta del mondo?",
+        "options": [
+          "K2",
+          "Everest",
+          "Monte Bianco",
+          "Kilimangiaro"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_90",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale gas respirano gli esseri umani?",
+        "options": [
+          "Azoto",
+          "Ossigeno",
+          "CO2",
+          "Idrogeno"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_91",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale paese ha inventato la pizza moderna?",
+        "options": [
+          "Francia",
+          "USA",
+          "Italia",
+          "Grecia"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_92",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha formulato la teoria della relatività?",
+        "options": [
+          "Newton",
+          "Einstein",
+          "Galileo",
+          "Tesla"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_93",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è l'oceano più grande?",
+        "options": [
+          "Atlantico",
+          "Indiano",
+          "Pacifico",
+          "Artico"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_94",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi costruì il Colosseo?",
+        "options": [
+          "Greci",
+          "Romani",
+          "Ottomani",
+          "Persiani"
+        ],
+        "correctAnswer": 1,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_95",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è la valuta del Giappone?",
+        "options": [
+          "Won",
+          "Yuan",
+          "Yen",
+          "Ringgit"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_96",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Chi ha scoperto la penicillina?",
+        "options": [
+          "Fleming",
+          "Pasteur",
+          "Curie",
+          "Darwin"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_97",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Quale strumento misura i terremoti?",
+        "options": [
+          "Termometro",
+          "Barometro",
+          "Sismografo",
+          "Igrometro"
+        ],
+        "correctAnswer": 2,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_98",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      },
+      {
+        "text": "Qual è il deserto caldo più grande?",
+        "options": [
+          "Sahara",
+          "Gobi",
+          "Kalahari",
+          "Atacama"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "difficile",
+        "id": "uploaded_1773063672286_99",
+        "source": "quiz_cultura_generale_100_domande.pdf"
+      }
+    ],
+    "QUAL_2": [],
+    "QUAL_3": [],
+    "SEMIS": [],
+    "FINAL": []
+  },
+  "leaderboardMusicUrl": "",
+  "semisMatches": null,
+  "finalMatch": null,
+  "currentQuestion": {
+    "text": "Quale gas respirano gli esseri umani?",
+    "options": [
+      "Azoto",
+      "Ossigeno",
+      "CO2",
+      "Idrogeno"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "difficile",
+    "id": "uploaded_1773063672285_11",
+    "source": "quiz_cultura_generale_100_domande.pdf"
+  }
+}

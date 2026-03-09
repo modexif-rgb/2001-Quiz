@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { socketService } from './services/socketService';
 import { GameState, Team } from './types';
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { GoogleGenAI, Type } from "@google/genai";
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -10,33 +11,352 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-function TimerDisplay({ seconds, active }: { seconds: number, active: boolean }) {
+import * as pdfjs from 'pdfjs-dist';
+// @ts-ignore
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+
+function CountdownDisplay({ seconds, active, endTime }: { seconds: number, active: boolean, endTime?: number }) {
+  const [displaySeconds, setDisplaySeconds] = useState(seconds);
+
+  useEffect(() => {
+    if (!active) {
+      setDisplaySeconds(seconds);
+      return;
+    }
+
+    const updateCountdown = () => {
+      if (endTime) {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+        setDisplaySeconds(remaining);
+      } else {
+        setDisplaySeconds(seconds);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 100);
+
+    return () => clearInterval(interval);
+  }, [active, seconds, endTime]);
+
+  return <>{displaySeconds}</>;
+}
+
+function TimerDisplay({ seconds, active, endTime, className }: { seconds: number, active: boolean, endTime?: number, className?: string }) {
+  const [displaySeconds, setDisplaySeconds] = useState(seconds);
+
+  useEffect(() => {
+    if (!active) {
+      setDisplaySeconds(seconds);
+      return;
+    }
+
+    const updateTimer = () => {
+      if (endTime) {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+        setDisplaySeconds(remaining);
+      } else {
+        setDisplaySeconds(seconds);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 100);
+
+    return () => clearInterval(interval);
+  }, [active, seconds, endTime]);
+
+  if (className) {
+    return (
+      <div className={cn(
+        className,
+        active ? (displaySeconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.6)]" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20") : "bg-zinc-800 text-zinc-500"
+      )}>
+        <Zap className={cn("w-8 h-8 sm:w-12 sm:h-12", active && displaySeconds <= 10 && "animate-bounce")} />
+        {String(Math.floor(displaySeconds / 60)).padStart(2, '0')}:{String(displaySeconds % 60).padStart(2, '0')}
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
       "flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-xl transition-all",
-      active ? (seconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]" : "bg-emerald-500/10 text-emerald-500") : "bg-zinc-800 text-zinc-500"
+      active ? (displaySeconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]" : "bg-emerald-500/10 text-emerald-500") : "bg-zinc-800 text-zinc-500"
     )}>
-      <Zap className={cn("w-5 h-5", active && seconds <= 10 && "animate-bounce")} />
-      {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}
+      <Zap className={cn("w-5 h-5", active && displaySeconds <= 10 && "animate-bounce")} />
+      {String(Math.floor(displaySeconds / 60)).padStart(2, '0')}:{String(displaySeconds % 60).padStart(2, '0')}
     </div>
   );
 }
 
+// Synthetic Sound Generator removed from global scope
+
 export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [myTeam, setMyTeam] = useState<Team | null>(() => {
+  const [myTeam, setMyTeam] = useState<Team | null>(null);
+  const [savedTeam, setSavedTeam] = useState<Team | null>(() => {
     const saved = localStorage.getItem('myTeam');
     return saved ? JSON.parse(saved) : null;
   });
   const [teamName, setTeamName] = useState('');
-  const [isAdmin, setIsAdmin] = useState(() => {
-    const path = window.location.pathname.toLowerCase();
-    return path === '/admin' || path === '/admin/';
-  });
-  const [isLeaderboard, setIsLeaderboard] = useState(() => {
-    const path = window.location.pathname.toLowerCase();
-    return path === '/leaderboard' || path === '/leaderboard/';
-  });
+  const [userRole, setUserRole] = useState<'TEAM' | 'ADMIN' | 'LEADERBOARD' | null>(null);
+  const [view, setView] = useState<'SELECTION' | 'PASSWORD' | 'APP'>('SELECTION');
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLeaderboard, setIsLeaderboard] = useState(false);
+
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const leaderboardMusicRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const prevCountdownActive = useRef(false);
+  const prevCountdownValue = useRef(-1);
+  const prevTimerValue = useRef(-1);
+  const prevBuzzCount = useRef(0);
+  const musicSyncedForTimer = useRef(false);
+
+  // Synthetic Sound Generator - Now inside App to use shared context
+  const playSyntheticSound = (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => {
+    if (!audioEnabled || !isLeaderboard) return;
+    
+    try {
+      let audioCtx = audioCtxRef.current;
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = audioCtx;
+      }
+      
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      if (type === 'beep') {
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+        gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.2);
+      } else if (type === 'buzz') {
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.4);
+        gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.4);
+      } else if (type === 'siren') {
+        // More evident siren: dual oscillator with frequency modulation
+        const now = audioCtx.currentTime;
+        [440, 445].forEach(baseFreq => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.linearRampToValueAtTime(baseFreq * 2, now + 0.5);
+          osc.frequency.linearRampToValueAtTime(baseFreq, now + 1.0);
+          osc.frequency.linearRampToValueAtTime(baseFreq * 2, now + 1.5);
+          osc.frequency.linearRampToValueAtTime(baseFreq, now + 2.0);
+          
+          g.gain.setValueAtTime(0.15, now);
+          g.gain.linearRampToValueAtTime(0.15, now + 1.8);
+          g.gain.linearRampToValueAtTime(0.01, now + 2.0);
+          
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 2.0);
+        });
+      } else if (type === 'countdown') {
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.15);
+      } else if (type === 'start') {
+        const now = audioCtx.currentTime;
+        // Fanfare style start
+        const freqs = [523.25, 659.25, 783.99, 1046.50];
+        freqs.forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.05);
+          g.gain.setValueAtTime(0.3, now + i * 0.05);
+          g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.5);
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          osc.start(now + i * 0.05);
+          osc.stop(now + i * 0.05 + 0.5);
+        });
+      } else if (type === 'finish') {
+        // Dramatic finish sound
+        const now = audioCtx.currentTime;
+        const freqs = [440, 349.23, 261.63, 196.00];
+        freqs.forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now + i * 0.1);
+          g.gain.setValueAtTime(0.2, now + i * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.8);
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          osc.start(now + i * 0.1);
+          osc.stop(now + i * 0.1 + 0.8);
+        });
+      }
+    } catch (e) {
+      console.error(`Synthetic ${type} failed`, e);
+    }
+  };
+  
+  // Initialize audio objects once
+  useEffect(() => {
+    const lbMusic = new Audio();
+    lbMusic.crossOrigin = "anonymous";
+    lbMusic.preload = "auto";
+    lbMusic.loop = true; // User requested loop
+    lbMusic.volume = 0.5;
+    leaderboardMusicRef.current = lbMusic;
+    
+    console.log("Audio initialized with synthetic SFX and leaderboard music");
+    
+    return () => {
+      lbMusic.pause();
+      lbMusic.src = "";
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
+      }
+    };
+  }, []);
+
+  // Update music source when it changes in gameState
+  useEffect(() => {
+    if (gameState?.leaderboardMusicUrl && leaderboardMusicRef.current) {
+      if (leaderboardMusicRef.current.src !== gameState.leaderboardMusicUrl) {
+        leaderboardMusicRef.current.src = gameState.leaderboardMusicUrl;
+        leaderboardMusicRef.current.load();
+      }
+    }
+  }, [gameState?.leaderboardMusicUrl]);
+
+  const lastSyncedTimerRef = useRef<number>(-1);
+
+  const prevPhase = useRef<string>('');
+
+  // Handle Phase Transition SFX
+  useEffect(() => {
+    if (!audioEnabled || !gameState || !isLeaderboard) return;
+
+    if (gameState.phase === 'FINISHED' && prevPhase.current !== 'FINISHED') {
+      playSyntheticSound('siren');
+    }
+
+    if (gameState.phase !== 'LOBBY' && prevPhase.current === 'LOBBY') {
+      playSyntheticSound('start');
+    }
+
+    prevPhase.current = gameState.phase;
+  }, [gameState?.phase, audioEnabled, isLeaderboard]);
+
+  // Handle Music and SFX for Leaderboard
+  useEffect(() => {
+    if (!audioEnabled || !gameState || !isLeaderboard) {
+      if (leaderboardMusicRef.current && !leaderboardMusicRef.current.paused) {
+        leaderboardMusicRef.current.pause();
+      }
+      musicSyncedForTimer.current = false;
+      return;
+    }
+
+    // Music logic for leaderboard: "background musicale solamente nella leaderboard quando parte il timer"
+    if (gameState.timerActive && gameState.timer > 0) {
+      if (leaderboardMusicRef.current) {
+        const targetTime = 80 - gameState.timer;
+        
+        // Sync music time: "quando il tempo finisce la canzone si trovi al minuto 1:20" (80s)
+        // Timer starts at 60s. So at timer=60, music should be at 80-60=20s.
+        // At timer=0, music should be at 80s.
+        
+        // Only sync if:
+        // 1. Music is paused (start of timer)
+        // 2. Music is significantly out of sync (> 5 seconds)
+        // 3. We haven't synced for this specific timer session yet
+        const isWayOff = Math.abs(leaderboardMusicRef.current.currentTime - targetTime) > 5;
+
+        if (leaderboardMusicRef.current.paused || (!musicSyncedForTimer.current && isWayOff)) {
+          leaderboardMusicRef.current.currentTime = targetTime;
+          musicSyncedForTimer.current = true;
+        }
+        
+        if (leaderboardMusicRef.current.paused) {
+          leaderboardMusicRef.current.play().catch(e => console.error("Music play failed", e));
+        }
+      }
+    } else {
+      if (leaderboardMusicRef.current && !leaderboardMusicRef.current.paused) {
+        leaderboardMusicRef.current.pause();
+      }
+      musicSyncedForTimer.current = false;
+    }
+
+    // SFX: "quello prima che finisca il tempo" (last 3 seconds)
+    if (gameState.timerActive && gameState.timer <= 3 && gameState.timer > 0) {
+      if (prevTimerValue.current !== gameState.timer) {
+        playSyntheticSound('beep');
+      }
+    }
+
+    // SFX: "quando finisce il tempo"
+    if (!gameState.timerActive && prevTimerValue.current === 1 && gameState.timer === 0) {
+      playSyntheticSound('siren');
+    }
+
+    prevTimerValue.current = gameState.timer;
+  }, [gameState?.timer, gameState?.timerActive, audioEnabled, isLeaderboard]);
+
+  // Handle Countdown SFX
+  useEffect(() => {
+    if (!audioEnabled || !gameState || !isLeaderboard) return;
+
+    // SFX: "3,2,1 prima delle domande"
+    if (gameState.countdownActive && gameState.countdown > 0) {
+      if (prevCountdownValue.current !== gameState.countdown) {
+        playSyntheticSound('countdown');
+      }
+    }
+
+    // SFX: "via" (when countdown reaches 0)
+    if (!gameState.countdownActive && prevCountdownActive.current && gameState.countdown === 0) {
+      playSyntheticSound('start');
+    }
+
+    prevCountdownValue.current = gameState.countdown;
+    prevCountdownActive.current = gameState.countdownActive;
+  }, [gameState?.countdown, gameState?.countdownActive, audioEnabled, isLeaderboard]);
+
+  // Handle Buzz SFX
+  useEffect(() => {
+    if (!audioEnabled || !gameState || !isLeaderboard) return;
+
+    if (gameState.buzzes.length > prevBuzzCount.current) {
+      playSyntheticSound('buzz');
+    }
+    prevBuzzCount.current = gameState.buzzes.length;
+  }, [gameState?.buzzes, audioEnabled, isLeaderboard]);
 
   useEffect(() => {
     console.log('Connecting to socket...');
@@ -89,6 +409,132 @@ export default function App() {
     }
   };
 
+  const handleRoleSelect = (role: 'TEAM' | 'ADMIN' | 'LEADERBOARD') => {
+    setUserRole(role);
+    if (role === 'TEAM') {
+      setIsAdmin(false);
+      setIsLeaderboard(false);
+      setView('APP');
+    } else {
+      setView('PASSWORD');
+    }
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '12345678') {
+      if (userRole === 'ADMIN') {
+        setIsAdmin(true);
+        setIsLeaderboard(false);
+      } else if (userRole === 'LEADERBOARD') {
+        setIsAdmin(false);
+        setIsLeaderboard(true);
+      }
+      setView('APP');
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+    }
+  };
+
+  if (view === 'SELECTION') {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-8"
+        >
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-8 h-8 text-emerald-500" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Benvenuto</h1>
+            <p className="text-zinc-400">Seleziona il tuo ruolo per continuare</p>
+          </div>
+
+          <div className="grid gap-4">
+            <button
+              onClick={() => handleRoleSelect('TEAM')}
+              className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white font-bold transition-all flex items-center justify-center gap-3"
+            >
+              <Users className="w-5 h-5 text-emerald-500" />
+              Accedi come Squadra
+            </button>
+            <button
+              onClick={() => handleRoleSelect('ADMIN')}
+              className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white font-bold transition-all flex items-center justify-center gap-3"
+            >
+              <Settings className="w-5 h-5 text-emerald-500" />
+              Accedi come Admin
+            </button>
+            <button
+              onClick={() => handleRoleSelect('LEADERBOARD')}
+              className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white font-bold transition-all flex items-center justify-center gap-3"
+            >
+              <ListOrdered className="w-5 h-5 text-emerald-500" />
+              Accedi come Leaderboard
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (view === 'PASSWORD') {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-6"
+        >
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-white">Accesso Riservato</h1>
+            <p className="text-zinc-400">Inserisci la password per {userRole}</p>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className={cn(
+                  "w-full bg-zinc-950 border rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
+                  passwordError ? "border-red-500" : "border-zinc-800"
+                )}
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-red-500 text-xs font-bold ml-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Password non corretta
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setView('SELECTION')}
+                className="flex-1 py-4 bg-zinc-800 text-zinc-400 font-bold rounded-2xl hover:bg-zinc-700 transition-all"
+              >
+                Indietro
+              </button>
+              <button
+                type="submit"
+                className="flex-[2] py-4 bg-emerald-500 text-zinc-950 font-bold rounded-2xl hover:bg-emerald-400 transition-all"
+              >
+                Accedi
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (!gameState) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-400">
@@ -100,12 +546,93 @@ export default function App() {
     );
   }
 
+  if (!audioEnabled && isLeaderboard) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl text-center max-w-sm space-y-6 shadow-2xl"
+        >
+          <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
+            <Zap className="w-8 h-8 text-emerald-500" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold mb-2">Attiva Audio</h3>
+            <p className="text-zinc-500 text-sm">Clicca per abilitare la musica e gli effetti sonori del gioco.</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => {
+                setAudioEnabled(true);
+                
+                // Initialize and unlock AudioContext
+                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                audioCtxRef.current = ctx;
+                if (ctx.state === 'suspended') ctx.resume();
+
+                // Unlock audio elements and connect to context
+                [leaderboardMusicRef.current].forEach(a => {
+                  if (a) {
+                    a.play().then(() => {
+                      a.pause();
+                      a.currentTime = 0;
+                    }).catch(() => {});
+                  }
+                });
+                
+                // We call the logic directly here because audioEnabled state isn't updated yet
+                if (isLeaderboard) {
+                  try {
+                    const osc = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    osc.connect(g);
+                    g.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, ctx.currentTime); 
+                    g.gain.setValueAtTime(0.2, ctx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.2);
+                  } catch (e) {}
+                }
+              }}
+              className="w-full py-4 bg-emerald-500 text-zinc-950 font-bold rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Zap className="w-5 h-5" />
+              Abilita Audio e Inizia
+            </button>
+            <button 
+              onClick={() => {
+                if (isLeaderboard) playSyntheticSound('beep');
+              }}
+              className="w-full py-3 bg-zinc-800 text-zinc-400 font-bold rounded-2xl hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 text-sm"
+            >
+              Prova Suono (Test)
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!gameState) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-zinc-500 font-bold animate-pulse">Connessione al server...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isAdmin) {
-    return <AdminDashboard gameState={gameState} />;
+    return <AdminDashboard gameState={gameState} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} />;
   }
 
   if (isLeaderboard) {
-    return <Leaderboard gameState={gameState} />;
+    return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} />;
   }
 
   if (!myTeam) {
@@ -114,8 +641,16 @@ export default function App() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl"
+          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl relative"
         >
+          <button
+            onClick={() => setView('SELECTION')}
+            className="absolute top-6 left-6 p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-xl transition-all"
+            title="Torna alla selezione"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
           <div className="flex justify-center mb-8">
             <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
               <Trophy className="w-8 h-8 text-emerald-500" />
@@ -144,6 +679,19 @@ export default function App() {
               <ChevronRight className="w-5 h-5" />
             </button>
           </form>
+
+          {savedTeam && (
+            <div className="mt-8 pt-8 border-t border-zinc-800">
+              <p className="text-center text-xs text-zinc-500 uppercase tracking-widest font-bold mb-4">Oppure riconnettiti</p>
+              <button
+                onClick={() => setMyTeam(savedTeam)}
+                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                Continua come {savedTeam.name}
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     );
@@ -152,27 +700,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
       {/* Header */}
-      <header className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
+      <header className="p-4 sm:p-6 border-b border-zinc-800 flex flex-wrap justify-between items-center gap-4 bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-emerald-500" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
           </div>
-          <div>
-            <h2 className="font-bold text-sm leading-tight">{myTeam.name}</h2>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">{myTeam.status}</p>
+          <div className="max-w-[120px] sm:max-w-none">
+            <h2 className="font-bold text-xs sm:text-sm leading-tight truncate">{myTeam.name}</h2>
+            <p className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">{myTeam.status}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} />
+        <div className="flex items-center gap-3 sm:gap-6">
+          <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
           <div className="text-right">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Punteggio</p>
-            <p className="text-xl font-black text-emerald-500">{myTeam.score}</p>
+            <p className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5 sm:mb-1">Punti</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-500">{myTeam.score}</p>
           </div>
-        </div>
-        <div className="bg-zinc-800 px-4 py-2 rounded-2xl border border-zinc-700">
-          <span className="text-xs font-bold text-zinc-400 mr-2">PUNTI</span>
-          <span className="text-lg font-black text-emerald-500">{myTeam.score}</span>
         </div>
       </header>
 
@@ -226,10 +770,10 @@ export default function App() {
             >
               <div className="text-center space-y-2">
                 <span className="text-xs font-bold text-emerald-500 uppercase tracking-[0.2em]">
-                  {gameState.phase === 'QUAL_1' ? 'Manche 1: Cultura Generale' : 
-                   gameState.phase === 'QUAL_2' ? 'Manche 2: Arti' : 'Manche 3: Mista'}
+                  Round {gameState.round} | {gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
+                   gameState.phase === 'QUAL_2' ? 'Arti' : 'Mista'}
                 </span>
-                <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}</h2>
+                <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}/10</h2>
               </div>
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center shadow-2xl space-y-8">
@@ -266,7 +810,13 @@ export default function App() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-2xl font-medium text-zinc-500 italic">In attesa della prossima domanda...</p>
+                  <div className="py-12 flex flex-col items-center gap-6">
+                    <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
+                      <Zap className="w-8 h-8 text-zinc-600" />
+                    </div>
+                    <p className="text-3xl font-black text-zinc-500 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                    <p className="text-zinc-600 font-medium">L'host sta preparando la sfida...</p>
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -313,31 +863,40 @@ export default function App() {
                 <h2 className="text-4xl font-black">Domanda {gameState.currentQuestionIndex}</h2>
               </div>
 
-              {gameState.currentQuestion && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center w-full">
-                  <p className="text-2xl font-bold text-white">{gameState.currentQuestion.text}</p>
-                </div>
-              )}
+              {gameState.isQuestionActive && gameState.currentQuestion ? (
+                <div className="w-full space-y-8">
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center w-full shadow-2xl">
+                    <p className="text-3xl font-bold text-white leading-tight">{gameState.currentQuestion.text}</p>
+                  </div>
 
-              {myTeam.status === 'eliminata' ? (
-                <div className="text-center space-y-4">
-                  <p className="text-zinc-500 italic">Sei stato eliminato. Goditi lo spettacolo!</p>
+                  {gameState.currentQuestion.options && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                      {gameState.currentQuestion.options.map((option, idx) => (
+                        <div 
+                          key={idx} 
+                          className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-left flex items-center gap-4 opacity-50 cursor-not-allowed group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-black text-zinc-500">
+                            {String.fromCharCode(65 + idx)}
+                          </div>
+                          <span className="text-zinc-400 font-bold">{option}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <button
-                  onClick={handleBuzz}
-                  disabled={!gameState.isQuestionActive || gameState.buzzes.length > 0}
-                  className={cn(
-                    "w-64 h-64 rounded-full border-8 transition-all flex items-center justify-center shadow-2xl active:scale-90",
-                    gameState.isQuestionActive && gameState.buzzes.length === 0
-                      ? "bg-red-600 border-red-800 hover:bg-red-500 animate-pulse"
-                      : "bg-zinc-800 border-zinc-900 opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <Zap className={cn("w-24 h-24", gameState.isQuestionActive ? "text-white" : "text-zinc-600")} />
-                </button>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
+                  <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
+                    <Zap className="w-8 h-8 text-zinc-600" />
+                  </div>
+                  <p className="text-3xl font-black text-zinc-500 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                  <p className="text-zinc-600 font-medium">L'host sta preparando la sfida...</p>
+                </div>
               )}
 
+              {/* Buzz button removed as per user request for SEMIS/FINAL phases */}
+              
               {gameState.buzzes.length > 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
@@ -392,38 +951,399 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ gameState }: { gameState: GameState }) {
-  const [nextDifficulty, setNextDifficulty] = useState<'facile' | 'media' | 'difficile'>('facile');
+function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void }) {
+  const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase);
+  const [isUploading, setIsUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({ 'default': true });
+  const [isMusicUploading, setIsMusicUploading] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const testAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Update uploadPhase when gameState.phase changes, but only if it's not LOBBY
+  useEffect(() => {
+    if (gameState.phase !== 'LOBBY') {
+      setUploadPhase(gameState.phase);
+    } else if (uploadPhase === 'LOBBY') {
+      setUploadPhase('QUAL_1');
+    }
+  }, [gameState.phase]);
 
   const sendAction = (action: string, payload: any = {}) => {
     socketService.send({ type: 'ADMIN_ACTION', action, payload });
   };
 
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const fileName = file.name;
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const typedarray = new Uint8Array(event.target?.result as ArrayBuffer);
+        
+        console.log("PDF.js processing, version:", pdfjs.version);
+        
+        let pdf;
+        try {
+          pdf = await pdfjs.getDocument({
+            data: typedarray,
+            useWorkerFetch: false,
+            isEvalSupported: false,
+            disableFontFace: true 
+          }).promise;
+        } catch (err: any) {
+          console.error("PDF loading failed:", err);
+          alert(`Errore nel caricamento del PDF: ${err.message || 'Errore sconosciuto'}. Prova con un file più semplice.`);
+          return;
+        }
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+        }
+
+        console.log("Extracted text from PDF, sending to Gemini for parsing...");
+        
+        try {
+          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+          const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: `Analizza il seguente testo estratto da un PDF e convertilo in un array JSON di domande per un quiz.
+            Il testo può contenere domande numerate, opzioni (A, B, C, D) e l'indicazione della risposta corretta (es. "Risposta: A", o un segno di spunta).
+            
+            REGOLE:
+            1. Ogni domanda deve avere: "text" (la domanda), "options" (un array di esattamente 4 stringhe), "correctAnswer" (indice 0-3 della risposta corretta), "difficulty" (sempre "difficile").
+            2. Se mancano opzioni, prova a dedurle dal contesto o ignora la domanda.
+            3. Assicurati che il testo della domanda sia pulito e non includa il numero della domanda.
+            4. Se trovi informazioni extra come "(4.411 metri)", includile nel testo della domanda o nell'opzione pertinente, non come opzione separata.
+            
+            TESTO:
+            ${fullText}`,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    text: { type: Type.STRING },
+                    options: { 
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING }
+                    },
+                    correctAnswer: { type: Type.INTEGER },
+                    difficulty: { type: Type.STRING }
+                  },
+                  required: ["text", "options", "correctAnswer", "difficulty"]
+                }
+              }
+            }
+          });
+
+          const questions = JSON.parse(response.text || "[]").map((q: any, idx: number) => ({
+            ...q,
+            id: `uploaded_${Date.now()}_${idx}`
+          }));
+
+          if (questions.length > 0) {
+            sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions, fileName });
+            alert(`Caricate ${questions.length} domande da ${fileName} nella fase ${uploadPhase}!`);
+            setExpandedSources(prev => ({ ...prev, [fileName]: true }));
+          } else {
+            alert("Non ho trovato domande nel formato previsto.");
+          }
+        } catch (aiErr: any) {
+          console.error("Gemini Parsing Error:", aiErr);
+          alert("Errore durante l'analisi delle domande con l'IA. Prova a caricare un file più piccolo o controlla la connessione.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error("PDF Error:", error);
+      alert("Errore durante il caricamento del PDF.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsMusicUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('music', file);
+
+      const response = await fetch('/api/upload-music', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (!response.ok) {
+        let errorMessage = 'Upload failed';
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const text = await response.text();
+          console.error('Server returned non-JSON error:', text.substring(0, 200));
+          errorMessage = `Server error (${response.status}). Controlla la console per i dettagli.`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        console.log('Music uploaded successfully:', data.url);
+        alert("Musica caricata con successo!");
+        setIsMusicUploading(false);
+      } else {
+        throw new Error("Il server non ha risposto con un formato JSON valido.");
+      }
+    } catch (err) {
+      console.error("Music upload error:", err);
+      alert("Errore durante il caricamento della musica. Assicurati che il file non sia troppo grande.");
+      setIsMusicUploading(false);
+    }
+  };
+
+  const availableQuestions = gameState.allQuestions[gameState.phase] || [];
+  
+  // Group ALL questions from ALL phases by source
+  const allQuestionsFlat = Object.values(gameState.allQuestions).flat();
+  const questionsBySource = allQuestionsFlat.reduce((acc, q) => {
+    const source = q.source || 'default';
+    if (!acc[source]) acc[source] = [];
+    // Avoid duplicates in the library view
+    if (!acc[source].some(existing => existing.id === q.id)) {
+      if (q.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+        acc[source].push(q);
+      }
+    }
+    return acc;
+  }, {} as Record<string, typeof availableQuestions>);
+
+  const toggleSource = (source: string) => {
+    setExpandedSources(prev => ({ ...prev, [source]: !prev[source] }));
+  };
+
+  const moveQueueItem = (index: number, direction: 'up' | 'down') => {
+    const newQueue = [...gameState.questionQueue];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newQueue.length) return;
+    
+    [newQueue[index], newQueue[targetIndex]] = [newQueue[targetIndex], newQueue[index]];
+    sendAction('REORDER_QUEUE', { queue: newQueue });
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <header className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+    <div className="min-h-screen bg-zinc-950 text-white p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        <header className="flex flex-col sm:flex-row justify-between items-center gap-6 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <button
+              onClick={onBack}
+              className="p-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+              title="Torna alla selezione"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center shrink-0">
               <Settings className="w-6 h-6 text-emerald-500" />
             </div>
             <div>
-              <h1 className="text-3xl font-black">Admin Dashboard</h1>
-              <p className="text-zinc-500">Controllo totale della partita</p>
+              <h1 className="text-2xl sm:text-3xl font-black">Admin Dashboard</h1>
+              <p className="text-zinc-500 text-sm">Controllo totale della partita</p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
-            <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} />
-            <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
+            <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="relative group">
+                <label className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-2xl font-bold hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
+                  <FileText className="w-4 h-4" />
+                  {isUploading ? 'Caricamento...' : 'Carica PDF'}
+                  <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" disabled={isUploading} />
+                </label>
+              </div>
+              {gameState.phase === 'LOBBY' && (
+                <button 
+                  onClick={() => sendAction('START_GAME')}
+                  className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-emerald-500 text-zinc-950 rounded-2xl font-black hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  Inizia Partita
+                </button>
+              )}
               <button 
                 onClick={() => sendAction('RESET_GAME')}
-                className="px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:bg-red-500/20 transition-all"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:bg-red-500/20 transition-all text-sm"
               >
-                Reset Totale
+                Reset
               </button>
             </div>
           </div>
         </header>
+
+        {/* PDF Management Section - Now more prominent and closer to upload */}
+        <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                File PDF Caricati
+              </h3>
+              <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1 w-fit">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase">Destinazione:</span>
+                <select 
+                  value={uploadPhase}
+                  onChange={(e) => setUploadPhase(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-emerald-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="QUAL_1">Qualificazioni 1</option>
+                  <option value="QUAL_2">Qualificazioni 2</option>
+                  <option value="QUAL_3">Qualificazioni 3</option>
+                  <option value="SEMIS">Semifinali</option>
+                  <option value="FINAL">Finale</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {gameState.uploadedFiles.length > 0 && (
+                <button 
+                  onClick={() => {
+                    // Using a simple state-less confirm or just direct action to avoid iframe issues
+                    // But for "Clear All", we really want a confirmation. 
+                    // I'll use a simple double-click pattern or just a prompt.
+                    const val = prompt('Scrivi "ELIMINA" per svuotare tutto il database:');
+                    if (val === 'ELIMINA') {
+                      sendAction('CLEAR_ALL_QUESTIONS');
+                    }
+                  }}
+                  className="text-[10px] font-bold text-red-500 hover:text-red-400 uppercase tracking-widest px-3 py-1 bg-red-500/10 rounded-lg border border-red-500/20 transition-all"
+                >
+                  Svuota Tutto
+                </button>
+              )}
+              <span className="text-[10px] font-bold text-zinc-600 bg-zinc-950 px-2 py-1 rounded-lg border border-zinc-800">
+                {gameState.uploadedFiles.length} FILE
+              </span>
+            </div>
+          </div>
+          
+          {gameState.uploadedFiles.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {gameState.uploadedFiles.map(file => (
+                <div key={file} className="flex items-center justify-between gap-3 bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-2xl group hover:border-zinc-700 transition-all">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-4 h-4 text-zinc-600 shrink-0" />
+                    <span className="text-sm text-zinc-300 truncate font-medium">{file}</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      // Removed confirm() to avoid iframe blocking issues
+                      sendAction('DELETE_FILE', { fileName: file });
+                    }}
+                    className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all shrink-0"
+                    title="Elimina file"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 border-2 border-dashed border-zinc-800 rounded-2xl">
+              <p className="text-zinc-600 text-sm italic">Nessun PDF caricato. Usa il pulsante sopra per iniziare.</p>
+            </div>
+          )}
+        </section>
+
+        {/* Music Management Section */}
+        <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                <Zap className="w-4 h-4 text-emerald-500" />
+                Musica per la Leaderboard
+              </h3>
+              <p className="text-[10px] text-zinc-600">
+                L'audio verrà riprodotto in loop sulla leaderboard quando il timer è attivo.
+              </p>
+            </div>
+            {gameState.leaderboardMusicUrl && (
+              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                MUSICA IMPOSTATA
+              </span>
+            )}
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <label className="flex-1 sm:flex-none px-6 py-3 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-2xl font-bold hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
+                <Plus className="w-4 h-4" />
+                {isMusicUploading ? 'Caricamento...' : 'Carica MP3'}
+                <input type="file" accept="audio/*" onChange={handleMusicUpload} className="hidden" disabled={isMusicUploading} />
+              </label>
+              {gameState.leaderboardMusicUrl && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (isMusicPlaying) {
+                        testAudioRef.current?.pause();
+                        setIsMusicPlaying(false);
+                      } else {
+                        if (!testAudioRef.current) {
+                          testAudioRef.current = new Audio(gameState.leaderboardMusicUrl);
+                          testAudioRef.current.onended = () => setIsMusicPlaying(false);
+                        } else {
+                          testAudioRef.current.src = gameState.leaderboardMusicUrl;
+                        }
+                        testAudioRef.current.play().catch(e => alert("Impossibile riprodurre l'audio: " + e.message));
+                        setIsMusicPlaying(true);
+                      }
+                    }}
+                    className={cn(
+                      "p-3 rounded-2xl border transition-all",
+                      isMusicPlaying ? "bg-emerald-500 text-zinc-950 border-emerald-400" : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white"
+                    )}
+                    title={isMusicPlaying ? "Ferma Test" : "Prova Audio"}
+                  >
+                    {isMusicPlaying ? <XCircle className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm("Sei sicuro di voler eliminare la musica caricata?")) {
+                        if (isMusicPlaying) {
+                          testAudioRef.current?.pause();
+                          setIsMusicPlaying(false);
+                        }
+                        sendAction('DELETE_LEADERBOARD_MUSIC');
+                      }
+                    }}
+                    className="p-3 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-2xl hover:text-red-500 hover:bg-red-500/10 transition-all"
+                    title="Elimina Musica"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {gameState.leaderboardMusicUrl && (
+              <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-2xl w-full sm:w-auto overflow-hidden">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-xs text-zinc-500 truncate max-w-[200px]">
+                  {gameState.leaderboardMusicUrl.includes('/uploads/') ? 'Musica Caricata' : 'Musica Predefinita'}
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Game Controls */}
@@ -434,21 +1354,40 @@ function AdminDashboard({ gameState }: { gameState: GameState }) {
                 Stato Partita
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Fase</p>
-                  <p className="text-lg font-black text-emerald-500">{gameState.phase}</p>
+                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Round</p>
+                    <p className="text-lg font-black text-emerald-500">{gameState.round}</p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: gameState.round + 1 })} className="p-1 hover:text-emerald-500"><ArrowUp className="w-3 h-3" /></button>
+                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: Math.max(1, gameState.round - 1) })} className="p-1 hover:text-emerald-500"><ArrowDown className="w-3 h-3" /></button>
+                  </div>
                 </div>
                 <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Domanda</p>
-                  <p className="text-lg font-black text-emerald-500">{gameState.currentQuestionIndex}/10</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-black text-emerald-500">{gameState.currentQuestionIndex}/10</p>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => socketService.send({ type: 'PREVIOUS_QUESTION' })}
+                        disabled={gameState.currentQuestionIndex <= 1}
+                        className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg hover:text-emerald-500 disabled:opacity-20"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Squadre</p>
                   <p className="text-lg font-black text-emerald-500">{gameState.teams.length}</p>
                 </div>
                 <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Buzz</p>
-                  <p className="text-lg font-black text-emerald-500">{gameState.buzzes.length}</p>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Stato</p>
+                  <p className={cn("text-lg font-black", gameState.isQuestionActive ? "text-emerald-500" : "text-red-500")}>
+                    {gameState.isQuestionActive ? 'ATTIVA' : 'INATTIVA'}
+                  </p>
                 </div>
               </div>
 
@@ -468,31 +1407,141 @@ function AdminDashboard({ gameState }: { gameState: GameState }) {
                 </div>
               )}
 
+              {/* Question Queue Section */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                  <ListOrdered className="w-4 h-4" />
+                  Coda Domande ({gameState.questionQueue.length})
+                </h3>
+                <div className="space-y-2">
+                  {gameState.questionQueue.map((qId, idx) => {
+                    const q = allQuestionsFlat.find(item => item.id === qId);
+                    if (!q) return null;
+                    return (
+                      <div key={`${qId}-${idx}`} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-xl">
+                        <span className="w-6 h-6 bg-zinc-800 rounded-lg flex items-center justify-center text-[10px] font-black text-zinc-500">{idx + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-300 truncate">{q.text}</p>
+                          <p className="text-[10px] text-zinc-600 uppercase font-bold">{q.source || 'default'}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => moveQueueItem(idx, 'up')} disabled={idx === 0} className="p-1.5 text-zinc-600 hover:text-emerald-500 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
+                          <button onClick={() => moveQueueItem(idx, 'down')} disabled={idx === gameState.questionQueue.length - 1} className="p-1.5 text-zinc-600 hover:text-emerald-500 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
+                          <button onClick={() => sendAction('REMOVE_FROM_QUEUE', { questionId: qId })} className="p-1.5 text-zinc-600 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {gameState.questionQueue.length === 0 && (
+                    <p className="text-center text-zinc-700 text-sm py-4 italic">Coda vuota. Aggiungi domande dalla lista sotto.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Next Question Selector (Grouped by Source) */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Libreria Domande</p>
+                </div>
+                
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                  <input 
+                    type="text" 
+                    placeholder="Cerca tra le domande..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  />
+                </div>
+
+                <div className="max-h-96 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                  {Object.entries(questionsBySource).map(([source, questions]) => (
+                    <div key={source} className="space-y-2">
+                      <button 
+                        onClick={() => toggleSource(source)}
+                        className="w-full flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          {expandedSources[source] ? <FolderOpen className="w-4 h-4 text-emerald-500" /> : <Folder className="w-4 h-4 text-zinc-500" />}
+                          <span className="text-sm font-bold text-zinc-300 truncate max-w-[250px]">{source}</span>
+                          <span className="text-[10px] bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">{questions.length}</span>
+                        </div>
+                        <ChevronRight className={cn("w-4 h-4 text-zinc-600 transition-transform", expandedSources[source] && "rotate-90")} />
+                      </button>
+
+                      {expandedSources[source] && (
+                        <div className="space-y-2 ml-4">
+                          {questions.map((q) => (
+                            <div
+                              key={q.id}
+                              className={cn(
+                                "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-4",
+                                gameState.questionQueue.includes(q.id) 
+                                  ? "bg-emerald-500/5 border-emerald-500/30" 
+                                  : "bg-zinc-900 border-zinc-800"
+                              )}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className={cn("text-sm font-medium", gameState.questionQueue.includes(q.id) ? "text-emerald-500" : "text-zinc-300")}>
+                                    {q.text}
+                                  </p>
+                                  {/* Find which phase this question belongs to */}
+                                  {Object.entries(gameState.allQuestions).map(([phase, qs]) => 
+                                    qs.some(item => item.id === q.id) ? (
+                                      <span key={phase} className="text-[8px] bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-700 uppercase font-black">
+                                        {phase}
+                                      </span>
+                                    ) : null
+                                  )}
+                                </div>
+                                {q.options && (
+                                  <p className="text-[10px] text-zinc-500 truncate">
+                                    {q.options.join(' • ')}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (gameState.questionQueue.includes(q.id)) {
+                                    sendAction('REMOVE_FROM_QUEUE', { questionId: q.id });
+                                  } else {
+                                    sendAction('ADD_TO_QUEUE', { questionId: q.id });
+                                  }
+                                }}
+                                className={cn(
+                                  "p-2 rounded-lg transition-all",
+                                  gameState.questionQueue.includes(q.id)
+                                    ? "bg-emerald-500 text-zinc-950"
+                                    : "bg-zinc-800 text-zinc-500 hover:bg-emerald-500 hover:text-zinc-950"
+                                )}
+                              >
+                                {gameState.questionQueue.includes(q.id) ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {Object.keys(questionsBySource).length === 0 && (
+                    <p className="text-center text-zinc-600 text-sm py-4 italic">Nessuna domanda trovata</p>
+                  )}
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-4 pt-4 items-center">
-                {gameState.phase === 'LOBBY' && (
-                  <button onClick={() => sendAction('START_GAME', { difficulty: nextDifficulty })} className="px-8 py-4 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all">
-                    Inizia Partita
-                  </button>
-                )}
                 {gameState.phase.startsWith('QUAL_') && gameState.phase !== 'QUAL_RESULTS' && (
                   <>
-                    <div className="flex items-center gap-2 bg-zinc-900 p-1 rounded-2xl border border-zinc-800">
-                      {(['facile', 'media', 'difficile'] as const).map((d) => (
-                        <button
-                          key={d}
-                          onClick={() => setNextDifficulty(d)}
-                          className={cn(
-                            "px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
-                            nextDifficulty === d ? "bg-emerald-500 text-zinc-950" : "text-zinc-500 hover:text-zinc-300"
-                          )}
-                        >
-                          {d}
-                        </button>
-                      ))}
-                    </div>
-                    <button onClick={() => sendAction('NEXT_QUESTION', { difficulty: nextDifficulty })} className="px-8 py-4 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all">
+                    <button onClick={() => sendAction('NEXT_QUESTION')} className="px-8 py-4 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all">
                       Prossima Domanda
                     </button>
+                    {gameState.showRoundWinner && (
+                      <button onClick={() => sendAction('START_NEXT_ROUND')} className="px-8 py-4 bg-amber-500 text-zinc-950 font-black rounded-2xl hover:bg-amber-400 transition-all animate-bounce">
+                        Avvia Prossimo Round
+                      </button>
+                    )}
                     <button onClick={() => sendAction('TOGGLE_QUESTION')} className={cn("px-8 py-4 font-black rounded-2xl transition-all", gameState.isQuestionActive ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20")}>
                       {gameState.isQuestionActive ? 'Ferma Tempo' : 'Attiva Domanda'}
                     </button>
@@ -514,11 +1563,24 @@ function AdminDashboard({ gameState }: { gameState: GameState }) {
             {/* Buzz List */}
             {gameState.buzzes.length > 0 && (
               <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-4">
-                <h3 className="text-xl font-bold">Ordine di Buzz</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-bold">Ordine di Buzz</h3>
+                  <button 
+                    onClick={() => sendAction('RESET_BUZZES')}
+                    className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-widest px-3 py-1 bg-zinc-800 rounded-lg border border-zinc-700 transition-all"
+                  >
+                    Resetta Buzz
+                  </button>
+                </div>
                 <div className="space-y-2">
                   {gameState.buzzes.map((buzz, i) => (
-                    <div key={buzz.teamId} className={cn("flex justify-between items-center p-4 rounded-2xl border", i === 0 ? "bg-emerald-500/10 border-emerald-500/30" : "bg-zinc-950 border-zinc-800")}>
-                      <span className="font-bold">{gameState.teams.find(t => t.id === buzz.teamId)?.name}</span>
+                    <div key={buzz.teamId} className={cn("flex justify-between items-center p-4 rounded-2xl border", i === 0 ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20" : "bg-zinc-950 border-zinc-800 opacity-60")}>
+                      <div className="flex items-center gap-4">
+                        <span className={cn("w-8 h-8 flex items-center justify-center rounded-full font-black text-sm", i === 0 ? "bg-emerald-500 text-zinc-950" : "bg-zinc-800 text-zinc-500")}>
+                          {i + 1}
+                        </span>
+                        <span className="font-bold text-lg">{gameState.teams.find(t => t.id === buzz.teamId)?.name}</span>
+                      </div>
                       <span className="text-xs font-mono text-zinc-500">+{((buzz.timestamp - gameState.buzzes[0].timestamp) / 1000).toFixed(3)}s</span>
                     </div>
                   ))}
@@ -555,7 +1617,7 @@ function AdminDashboard({ gameState }: { gameState: GameState }) {
                 Squadre
               </h3>
               <div className="space-y-4">
-                {gameState.teams.sort((a, b) => b.score - a.score).map(team => (
+                {[...gameState.teams].sort((a, b) => b.score - a.score).map(team => (
                   <div key={team.id} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
@@ -620,83 +1682,205 @@ function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onSco
   );
 }
 
-function Leaderboard({ gameState }: { gameState: GameState }) {
+function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void }) {
   const sortedTeams = [...gameState.teams].sort((a, b) => b.score - a.score);
-  const [audioEnabled, setAudioEnabled] = useState(false);
 
-  useEffect(() => {
-    if (!audioEnabled) return;
-    let music: HTMLAudioElement | null = null;
-    if (gameState.timerActive) {
-      music = new Audio('https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3');
-      music.loop = true;
-      music.volume = 0.2;
-      music.play().catch(e => console.log("Audio play failed", e));
-    }
-    return () => {
-      if (music) {
-        music.pause();
-        music.src = "";
-      }
-    };
-  }, [gameState.timerActive, audioEnabled]);
-
-  useEffect(() => {
-    if (!audioEnabled || !gameState.timerActive) return;
-    if (gameState.timer <= 3 && gameState.timer > 0) {
-      const beep = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
-      beep.volume = 0.5;
-      beep.play().catch(e => console.log("Audio play failed", e));
-    }
-    if (gameState.timer === 0) {
-      const siren = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-emergency-siren-1002.mp3');
-      siren.volume = 0.5;
-      siren.play().catch(e => console.log("Audio play failed", e));
-    }
-  }, [gameState.timer, gameState.timerActive, audioEnabled]);
+  const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
+                    gameState.phase === 'QUAL_2' ? 'Cultura Generale' : 
+                    gameState.phase === 'QUAL_3' ? 'Cultura Generale' : 
+                    gameState.phase === 'SEMIS' ? 'Semifinali' : 
+                    gameState.phase === 'FINAL' ? 'Finale' : 'Gara';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-8 flex flex-col items-center">
-      {!audioEnabled && (
-        <div className="fixed inset-0 z-50 bg-zinc-950/90 backdrop-blur-sm flex items-center justify-center p-6">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl text-center max-w-sm space-y-6 shadow-2xl"
-          >
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
-              <Zap className="w-8 h-8 text-emerald-500" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-2">Attiva Audio</h3>
-              <p className="text-zinc-500 text-sm">Clicca per abilitare la musica e gli effetti sonori della classifica.</p>
-            </div>
-            <button 
-              onClick={() => setAudioEnabled(true)}
-              className="w-full py-4 bg-emerald-500 text-zinc-950 font-bold rounded-2xl hover:bg-emerald-400 transition-all active:scale-95"
-            >
-              Abilita Audio
-            </button>
-          </motion.div>
+    <div className="min-h-screen bg-zinc-950 text-white p-4 sm:p-8 flex flex-col items-center overflow-x-hidden">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="fixed top-4 left-4 sm:top-8 sm:left-8 z-40 p-3 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+        title="Torna alla selezione"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </button>
+
+      {/* Audio Status Indicator */}
+      <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col gap-2">
+        <button 
+          onClick={() => {
+            // This button allows manual unlocking if needed
+            playSyntheticSound('beep');
+          }}
+          className="p-3 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white transition-all"
+          title="Test Suono"
+        >
+          <Zap className="w-4 h-4" />
+        </button>
+        <div 
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all",
+            audioEnabled ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+          )}
+        >
+          <div className={cn("w-2 h-2 rounded-full", audioEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+          Audio {audioEnabled ? 'Attivo' : 'Disattivato'}
         </div>
-      )}
+      </div>
+      <AnimatePresence>
+        {gameState.showRoundWinner && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-zinc-950/95 flex flex-col items-center justify-center p-6 text-center"
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="space-y-8"
+            >
+              <div className="w-32 h-32 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
+                <Trophy className="w-16 h-16 text-amber-500" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-4xl sm:text-6xl font-black text-white">Round {gameState.round} terminato</h2>
+                <p className="text-xl sm:text-2xl text-zinc-400 font-medium">
+                  Questo round è stato vinto dalla squadra:
+                </p>
+              </div>
+              <motion.div 
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1.1 }}
+                transition={{ repeat: Infinity, duration: 1, repeatType: 'reverse' }}
+                className="text-5xl sm:text-8xl font-black text-amber-500 drop-shadow-[0_0_30px_rgba(245,158,11,0.3)]"
+              >
+                {gameState.roundWinner}
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {gameState.allTeamsAnswered && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-md p-6 text-center"
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="space-y-8"
+            >
+              <div className="w-32 h-32 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-4xl sm:text-7xl font-black text-white uppercase tracking-tight">
+                  Tutte le squadre hanno risposto
+                </h2>
+                <p className="text-xl sm:text-2xl text-zinc-500 font-bold uppercase tracking-widest animate-pulse">
+                  Preparatevi per il prossimo round...
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {gameState.countdownActive && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="text-center space-y-8"
+            >
+              <h2 className="text-4xl sm:text-6xl font-black text-zinc-500 uppercase tracking-[0.3em]">
+                {gameState.countdownType === 'QUESTION_ENDING' ? 'Fine Domanda' : 'Prossima Domanda'}
+              </h2>
+              <motion.div 
+                key={gameState.countdown}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={cn(
+                  "text-[15rem] sm:text-[25rem] font-black drop-shadow-[0_0_50px_rgba(16,185,129,0.5)] leading-none",
+                  gameState.countdownType === 'QUESTION_ENDING' ? "text-red-500" : "text-emerald-500"
+                )}
+              >
+                <CountdownDisplay seconds={gameState.countdown} active={gameState.countdownActive} endTime={gameState.countdownEndTime} />
+              </motion.div>
+              <p className="text-xl sm:text-2xl font-bold text-zinc-400 uppercase tracking-widest animate-pulse">
+                {gameState.countdownType === 'QUESTION_ENDING' ? 'Tempo quasi scaduto!' : 'Preparatevi...'}
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12 w-full max-w-4xl flex flex-col items-center"
+        className="text-center mb-8 sm:mb-12 w-full max-w-4xl flex flex-col items-center"
       >
-        <div className="flex justify-between items-center w-full mb-8">
-          <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center">
-            <Trophy className="w-10 h-10 text-emerald-500" />
+        <div className="flex flex-col sm:flex-row justify-between items-center w-full mb-6 sm:mb-12 px-4 gap-6">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 bg-emerald-500/10 rounded-2xl sm:rounded-3xl flex items-center justify-center shrink-0">
+            <Trophy className="w-8 h-8 sm:w-12 sm:h-12 text-emerald-500" />
           </div>
-          <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} />
-          <div className="w-20 h-20" /> {/* Spacer */}
-        </div>
-        <h1 className="text-5xl font-black tracking-tight">Classifica Real-Time</h1>
-        <p className="text-zinc-500 mt-2 font-medium uppercase tracking-widest">2001 Domande</p>
-      </motion.div>
+          
+          <TimerDisplay 
+            seconds={gameState.timer} 
+            active={gameState.timerActive} 
+            endTime={gameState.timerEndTime}
+            className="flex items-center gap-4 px-8 py-4 rounded-3xl font-mono font-black text-4xl sm:text-7xl transition-all shadow-2xl"
+          />
 
-      <div className="w-full max-w-4xl space-y-4">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 hidden sm:block" /> {/* Spacer */}
+        </div>
+        
+        <div className="space-y-2">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4">Classifica Real-Time</h1>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-emerald-500 text-sm sm:text-lg font-black uppercase tracking-[0.3em]">Round {gameState.round} | {roundType}</p>
+            <p className="text-zinc-500 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}/10</p>
+          </div>
+        </div>
+      </motion.div>
+      
+      {/* Current Question Display during timer */}
+      <AnimatePresence>
+        {gameState.timerActive && gameState.currentQuestion && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            className="w-full max-w-4xl mb-8 px-4"
+          >
+            <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(16,185,129,0.15)] relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <FileText className="w-24 h-24 text-emerald-500" />
+              </div>
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="px-4 py-1.5 bg-emerald-500 text-zinc-950 text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
+                    Domanda in corso
+                  </div>
+                </div>
+                <h3 className="text-2xl sm:text-4xl font-black text-white leading-tight">
+                  {gameState.currentQuestion.text}
+                </h3>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="w-full max-w-4xl space-y-3 sm:space-y-4 px-4">
         <AnimatePresence mode="popLayout">
           {sortedTeams.map((team, index) => {
             const isFirst = index === 0;
