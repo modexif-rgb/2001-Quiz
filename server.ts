@@ -493,21 +493,24 @@ async function startServer() {
 
       case 'SUBMIT_ANSWER':
         if (gameState.isQuestionActive && gameState.phase.startsWith('QUAL_')) {
-          gameState.selectedAnswers[data.teamId] = data.answerIndex;
-          
-          // Check if all active teams have answered
-          const activeTeams = gameState.teams.filter(t => t.status !== 'eliminata');
-          const answeredCount = Object.keys(gameState.selectedAnswers).length;
-          
-          if (answeredCount >= activeTeams.length && activeTeams.length > 0) {
-            gameState.allTeamsAnswered = true;
-            // Start a countdown that indicates the question is ending
-            setTimeout(() => {
-              startCountdown(roomId, 'QUESTION_ENDING', 5);
-            }, 2000);
+          // Prevent changing answer if already submitted
+          if (gameState.selectedAnswers[data.teamId] === undefined) {
+            gameState.selectedAnswers[data.teamId] = data.answerIndex;
+            
+            // Check if all active teams have answered
+            const activeTeams = gameState.teams.filter(t => t.status !== 'eliminata');
+            const answeredCount = Object.keys(gameState.selectedAnswers).length;
+            
+            if (answeredCount >= activeTeams.length && activeTeams.length > 0) {
+              gameState.allTeamsAnswered = true;
+              // Start a countdown that indicates the question is ending
+              setTimeout(() => {
+                startCountdown(roomId, 'QUESTION_ENDING', 5);
+              }, 2000);
+            }
+            
+            broadcast(roomId, { type: 'STATE_UPDATE', state: gameState });
           }
-          
-          broadcast(roomId, { type: 'STATE_UPDATE', state: gameState });
         }
         break;
 
@@ -531,6 +534,8 @@ async function startServer() {
       case 'ADMIN_ACTION':
         if (data.action === 'START_COUNTDOWN') {
           startCountdown(roomId, 'NEXT_QUESTION');
+        } else if (data.action === 'CLEAR_BUZZES') {
+          gameState.buzzes = [];
         } else if (data.action === 'SET_NEXT_QUESTION') {
           gameState.nextQuestionId = data.payload.questionId;
         } else if (data.action === 'ADD_TO_QUEUE') {

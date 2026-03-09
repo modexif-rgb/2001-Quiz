@@ -74,7 +74,7 @@ function TimerDisplay({ seconds, active, endTime, className }: { seconds: number
     return (
       <div className={cn(
         className,
-        active ? (displaySeconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.6)]" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20") : "bg-zinc-800 text-zinc-500"
+        active ? (displaySeconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.6)]" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20") : "bg-zinc-100 text-zinc-400"
       )}>
         <Zap className={cn("w-8 h-8 sm:w-12 sm:h-12", active && displaySeconds <= 10 && "animate-bounce")} />
         {String(Math.floor(displaySeconds / 60)).padStart(2, '0')}:{String(displaySeconds % 60).padStart(2, '0')}
@@ -85,7 +85,7 @@ function TimerDisplay({ seconds, active, endTime, className }: { seconds: number
   return (
     <div className={cn(
       "flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-xl transition-all",
-      active ? (displaySeconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]" : "bg-emerald-500/10 text-emerald-500") : "bg-zinc-800 text-zinc-500"
+      active ? (displaySeconds <= 10 ? "bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]" : "bg-emerald-500/10 text-emerald-500") : "bg-zinc-100 text-zinc-400"
     )}>
       <Zap className={cn("w-5 h-5", active && displaySeconds <= 10 && "animate-bounce")} />
       {String(Math.floor(displaySeconds / 60)).padStart(2, '0')}:{String(displaySeconds % 60).padStart(2, '0')}
@@ -439,38 +439,38 @@ export default function App() {
 
   if (view === 'SELECTION') {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-8"
+          className="w-full max-w-md bg-zinc-50 border border-zinc-200 rounded-3xl p-8 shadow-2xl space-y-8"
         >
           <div className="text-center space-y-2">
             <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Trophy className="w-8 h-8 text-emerald-500" />
             </div>
-            <h1 className="text-3xl font-bold text-white">Benvenuto</h1>
-            <p className="text-zinc-400">Seleziona il tuo ruolo per continuare</p>
+            <h1 className="text-3xl font-bold text-zinc-950">Benvenuto</h1>
+            <p className="text-zinc-600">Seleziona il tuo ruolo per continuare</p>
           </div>
 
           <div className="grid gap-4">
             <button
               onClick={() => handleRoleSelect('TEAM')}
-              className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white font-bold transition-all flex items-center justify-center gap-3"
+              className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
             >
               <Users className="w-5 h-5 text-emerald-500" />
               Accedi come Squadra
             </button>
             <button
               onClick={() => handleRoleSelect('ADMIN')}
-              className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white font-bold transition-all flex items-center justify-center gap-3"
+              className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
             >
               <Settings className="w-5 h-5 text-emerald-500" />
               Accedi come Admin
             </button>
             <button
               onClick={() => handleRoleSelect('LEADERBOARD')}
-              className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white font-bold transition-all flex items-center justify-center gap-3"
+              className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
             >
               <ListOrdered className="w-5 h-5 text-emerald-500" />
               Accedi come Leaderboard
@@ -483,15 +483,15 @@ export default function App() {
 
   if (view === 'PASSWORD') {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-6"
+          className="w-full max-w-md bg-zinc-50 border border-zinc-200 rounded-3xl p-8 shadow-2xl space-y-6"
         >
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-white">Accesso Riservato</h1>
-            <p className="text-zinc-400">Inserisci la password per {userRole}</p>
+            <h1 className="text-2xl font-bold text-zinc-950">Accesso Riservato</h1>
+            <p className="text-zinc-600">Inserisci la password per {userRole}</p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -502,8 +502,8 @@ export default function App() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className={cn(
-                  "w-full bg-zinc-950 border rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
-                  passwordError ? "border-red-500" : "border-zinc-800"
+                  "w-full bg-white border rounded-2xl px-5 py-4 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
+                  passwordError ? "border-red-500" : "border-zinc-200"
                 )}
                 autoFocus
               />
@@ -518,7 +518,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setView('SELECTION')}
-                className="flex-1 py-4 bg-zinc-800 text-zinc-400 font-bold rounded-2xl hover:bg-zinc-700 transition-all"
+                className="flex-1 py-4 bg-zinc-100 text-zinc-500 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
               >
                 Indietro
               </button>
@@ -537,7 +537,7 @@ export default function App() {
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-400">
+      <div className="min-h-screen bg-white flex items-center justify-center text-zinc-500">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
           <p className="font-medium animate-pulse">Connessione al server...</p>
@@ -548,18 +548,18 @@ export default function App() {
 
   if (!audioEnabled && isLeaderboard) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl text-center max-w-sm space-y-6 shadow-2xl"
+          className="bg-zinc-50 border border-zinc-200 p-8 rounded-3xl text-center max-w-sm space-y-6 shadow-2xl"
         >
           <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
             <Zap className="w-8 h-8 text-emerald-500" />
           </div>
           <div>
-            <h3 className="text-xl font-bold mb-2">Attiva Audio</h3>
-            <p className="text-zinc-500 text-sm">Clicca per abilitare la musica e gli effetti sonori del gioco.</p>
+            <h3 className="text-xl font-bold mb-2 text-zinc-950">Attiva Audio</h3>
+            <p className="text-zinc-600 text-sm">Clicca per abilitare la musica e gli effetti sonori del gioco.</p>
           </div>
           <div className="flex flex-col gap-3">
             <button 
@@ -606,7 +606,7 @@ export default function App() {
               onClick={() => {
                 if (isLeaderboard) playSyntheticSound('beep');
               }}
-              className="w-full py-3 bg-zinc-800 text-zinc-400 font-bold rounded-2xl hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 text-sm"
+              className="w-full py-3 bg-zinc-100 text-zinc-500 font-bold rounded-2xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm"
             >
               Prova Suono (Test)
             </button>
@@ -618,7 +618,7 @@ export default function App() {
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-zinc-500 font-bold animate-pulse">Connessione al server...</p>
@@ -637,15 +637,15 @@ export default function App() {
 
   if (!myTeam) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl relative"
+          className="w-full max-w-md bg-zinc-50 border border-zinc-200 rounded-3xl p-8 shadow-2xl relative"
         >
           <button
             onClick={() => setView('SELECTION')}
-            className="absolute top-6 left-6 p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-xl transition-all"
+            className="absolute top-6 left-6 p-2 text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 rounded-xl transition-all"
             title="Torna alla selezione"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -656,8 +656,8 @@ export default function App() {
               <Trophy className="w-8 h-8 text-emerald-500" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white text-center mb-2">2001 Domande</h1>
-          <p className="text-zinc-400 text-center mb-8">Inserisci il nome della tua squadra per iniziare</p>
+          <h1 className="text-3xl font-bold text-zinc-950 text-center mb-2">2001 Domande</h1>
+          <p className="text-zinc-600 text-center mb-8">Inserisci il nome della tua squadra per iniziare</p>
           
           <form onSubmit={handleJoin} className="space-y-4">
             <div>
@@ -667,7 +667,7 @@ export default function App() {
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 placeholder="Es. I Geni del Quiz"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-5 py-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                 required
               />
             </div>
@@ -681,11 +681,11 @@ export default function App() {
           </form>
 
           {savedTeam && (
-            <div className="mt-8 pt-8 border-t border-zinc-800">
+            <div className="mt-8 pt-8 border-t border-zinc-200">
               <p className="text-center text-xs text-zinc-500 uppercase tracking-widest font-bold mb-4">Oppure riconnettiti</p>
               <button
                 onClick={() => setMyTeam(savedTeam)}
-                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 Continua come {savedTeam.name}
                 <ChevronRight className="w-5 h-5" />
@@ -698,9 +698,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+    <div className="min-h-screen bg-white text-zinc-950 flex flex-col">
       {/* Header */}
-      <header className="p-4 sm:p-6 border-b border-zinc-800 flex flex-wrap justify-between items-center gap-4 bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
+      <header className="p-4 sm:p-6 border-b border-zinc-200 flex flex-wrap justify-between items-center gap-4 bg-white/50 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
             <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
@@ -731,11 +731,11 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="text-center space-y-6"
             >
-              <div className="w-24 h-24 bg-zinc-900 rounded-full flex items-center justify-center mx-auto border-4 border-emerald-500/20">
+              <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center mx-auto border-4 border-emerald-500/20">
                 <Users className="w-10 h-10 text-emerald-500 animate-pulse" />
               </div>
-              <h1 className="text-4xl font-black tracking-tight">In attesa dell'host...</h1>
-              <p className="text-zinc-400">La partita inizierà a breve. Preparati!</p>
+              <h1 className="text-4xl font-black tracking-tight text-zinc-950">In attesa dell'host...</h1>
+              <p className="text-zinc-600">La partita inizierà a breve. Preparati!</p>
               
               <button
                 onClick={() => {
@@ -745,7 +745,7 @@ export default function App() {
                     localStorage.removeItem('myTeam');
                   }
                 }}
-                className="text-zinc-500 hover:text-zinc-300 text-sm font-bold flex items-center gap-2 mx-auto transition-colors"
+                className="text-zinc-500 hover:text-zinc-950 text-sm font-bold flex items-center gap-2 mx-auto transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 Cambia squadra o esci
@@ -753,7 +753,7 @@ export default function App() {
 
               <div className="flex flex-wrap justify-center gap-2 mt-8">
                 {gameState.teams.map(t => (
-                  <span key={t.id} className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-500">
+                  <span key={t.id} className="px-3 py-1 bg-zinc-50 border border-zinc-200 rounded-full text-xs text-zinc-500">
                     {t.name}
                   </span>
                 ))}
@@ -776,46 +776,59 @@ export default function App() {
                 <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}/10</h2>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center shadow-2xl space-y-8">
+              <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 text-center shadow-2xl space-y-8">
                 {gameState.isQuestionActive && gameState.currentQuestion ? (
                   <>
-                    <p className="text-2xl font-bold text-white">{gameState.currentQuestion.text}</p>
+                    <p className="text-2xl font-bold text-zinc-950">{gameState.currentQuestion.text}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {gameState.currentQuestion.options?.map((option, idx) => (
                         <button
                           key={idx}
-                          disabled={!gameState.isQuestionActive}
+                          disabled={!gameState.isQuestionActive || gameState.selectedAnswers[myTeam.id] !== undefined}
                           onClick={() => handleAnswer(idx)}
                           className={cn(
-                            "bg-zinc-950 border rounded-2xl p-6 text-left transition-all flex items-center gap-4 group",
+                            "bg-white border rounded-2xl p-6 text-left transition-all flex items-center gap-4 group relative overflow-hidden",
                             gameState.selectedAnswers[myTeam.id] === idx 
                               ? "border-emerald-500 bg-emerald-500/10" 
-                              : "border-zinc-800 hover:bg-zinc-800 active:scale-95"
+                              : gameState.selectedAnswers[myTeam.id] !== undefined
+                                ? "border-zinc-200 opacity-50 cursor-not-allowed"
+                                : "border-zinc-200 hover:bg-zinc-100 active:scale-95"
                           )}
                         >
+                          {gameState.selectedAnswers[myTeam.id] === idx && (
+                            <motion.div 
+                              initial={{ x: '-100%' }}
+                              animate={{ x: '100%' }}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                              className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent"
+                            />
+                          )}
                           <div className={cn(
-                            "w-10 h-10 rounded-xl border flex items-center justify-center font-black transition-colors",
+                            "w-10 h-10 rounded-xl border flex items-center justify-center font-black transition-colors relative z-10",
                             gameState.selectedAnswers[myTeam.id] === idx
                               ? "bg-emerald-500 text-zinc-950 border-emerald-400"
-                              : "bg-zinc-900 border-zinc-800 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-zinc-950"
+                              : "bg-zinc-50 border-zinc-200 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-zinc-950"
                           )}>
                             {String.fromCharCode(65 + idx)}
                           </div>
                           <span className={cn(
-                            "font-bold transition-colors",
-                            gameState.selectedAnswers[myTeam.id] === idx ? "text-white" : "text-zinc-300 group-hover:text-white"
+                            "font-bold transition-colors relative z-10",
+                            gameState.selectedAnswers[myTeam.id] === idx ? "text-zinc-950" : "text-zinc-700 group-hover:text-zinc-950"
                           )}>{option}</span>
+                          {gameState.selectedAnswers[myTeam.id] === idx && (
+                            <CheckCircle2 className="w-6 h-6 text-emerald-500 ml-auto relative z-10" />
+                          )}
                         </button>
                       ))}
                     </div>
                   </>
                 ) : (
                   <div className="py-12 flex flex-col items-center gap-6">
-                    <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
-                      <Zap className="w-8 h-8 text-zinc-600" />
+                    <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center animate-pulse">
+                      <Zap className="w-8 h-8 text-zinc-400" />
                     </div>
-                    <p className="text-3xl font-black text-zinc-500 uppercase tracking-[0.2em]">Prossima Domanda</p>
-                    <p className="text-zinc-600 font-medium">L'host sta preparando la sfida...</p>
+                    <p className="text-3xl font-black text-zinc-400 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                    <p className="text-zinc-500 font-medium">L'host sta preparando la sfida...</p>
                   </div>
                 )}
               </div>
@@ -834,16 +847,16 @@ export default function App() {
                   <div className="w-32 h-32 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-16 h-16 text-emerald-500" />
                   </div>
-                  <h1 className="text-5xl font-black">QUALIFICATI!</h1>
-                  <p className="text-zinc-400 text-xl">Ottimo lavoro, siete tra le migliori 4 squadre!</p>
+                  <h1 className="text-5xl font-black text-zinc-950">QUALIFICATI!</h1>
+                  <p className="text-zinc-600 text-xl">Ottimo lavoro, siete tra le migliori 4 squadre!</p>
                 </>
               ) : (
                 <>
-                  <div className="w-32 h-32 bg-zinc-800 rounded-full flex items-center justify-center mx-auto">
-                    <XCircle className="w-16 h-16 text-zinc-500" />
+                  <div className="w-32 h-32 bg-zinc-100 rounded-full flex items-center justify-center mx-auto">
+                    <XCircle className="w-16 h-16 text-zinc-400" />
                   </div>
-                  <h1 className="text-5xl font-black text-zinc-500">FINE CORSA</h1>
-                  <p className="text-zinc-400 text-xl">Il vostro percorso si ferma qui... ma ottima partita!</p>
+                  <h1 className="text-5xl font-black text-zinc-400">FINE CORSA</h1>
+                  <p className="text-zinc-500 text-xl">Il vostro percorso si ferma qui... ma ottima partita!</p>
                 </>
               )}
             </motion.div>
@@ -865,8 +878,8 @@ export default function App() {
 
               {gameState.isQuestionActive && gameState.currentQuestion ? (
                 <div className="w-full space-y-8">
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center w-full shadow-2xl">
-                    <p className="text-3xl font-bold text-white leading-tight">{gameState.currentQuestion.text}</p>
+                  <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 text-center w-full shadow-2xl">
+                    <p className="text-3xl font-bold text-zinc-950 leading-tight">{gameState.currentQuestion.text}</p>
                   </div>
 
                   {gameState.currentQuestion.options && (
@@ -874,39 +887,65 @@ export default function App() {
                       {gameState.currentQuestion.options.map((option, idx) => (
                         <div 
                           key={idx} 
-                          className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-left flex items-center gap-4 opacity-50 cursor-not-allowed group"
+                          className="bg-white border border-zinc-200 rounded-2xl p-6 text-left flex items-center gap-4 opacity-50 cursor-not-allowed group"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-black text-zinc-500">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-zinc-400">
                             {String.fromCharCode(65 + idx)}
                           </div>
-                          <span className="text-zinc-400 font-bold">{option}</span>
+                          <span className="text-zinc-500 font-bold">{option}</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
-                  <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
-                    <Zap className="w-8 h-8 text-zinc-600" />
+                <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
+                  <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center animate-pulse">
+                    <Zap className="w-8 h-8 text-zinc-400" />
                   </div>
-                  <p className="text-3xl font-black text-zinc-500 uppercase tracking-[0.2em]">Prossima Domanda</p>
-                  <p className="text-zinc-600 font-medium">L'host sta preparando la sfida...</p>
+                  <p className="text-3xl font-black text-zinc-400 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                  <p className="text-zinc-500 font-medium">L'host sta preparando la sfida...</p>
                 </div>
               )}
 
-              {/* Buzz button removed as per user request for SEMIS/FINAL phases */}
+              {gameState.isQuestionActive && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleBuzz}
+                  disabled={gameState.buzzes.some(b => b.teamId === myTeam?.id)}
+                  className={cn(
+                    "w-48 h-48 sm:w-64 sm:h-64 rounded-full border-8 flex flex-col items-center justify-center gap-2 transition-all shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden",
+                    gameState.buzzes.some(b => b.teamId === myTeam?.id)
+                      ? "bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed shadow-none"
+                      : "bg-amber-500 border-amber-400 text-zinc-950 hover:bg-amber-400 hover:shadow-[0_0_80px_rgba(245,158,11,0.4)] active:scale-90"
+                  )}
+                >
+                  {!gameState.buzzes.some(b => b.teamId === myTeam?.id) && (
+                    <motion.div
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                        opacity: [0.1, 0.3, 0.1] 
+                      }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="absolute inset-0 bg-white rounded-full"
+                    />
+                  )}
+                  <Zap className={cn("w-16 h-16 sm:w-24 sm:h-24 relative z-10", !gameState.buzzes.some(b => b.teamId === myTeam?.id) && "animate-pulse")} />
+                  <span className="text-xl sm:text-2xl font-black uppercase tracking-tighter relative z-10">BUZZ</span>
+                </motion.button>
+              )}
               
               {gameState.buzzes.length > 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4"
+                  className="bg-white border border-zinc-200 rounded-2xl px-6 py-4 flex items-center gap-4 shadow-lg"
                 >
                   <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
                     <Zap className="w-4 h-4 text-zinc-950" />
                   </div>
-                  <p className="font-bold">
+                  <p className="font-bold text-zinc-950">
                     {gameState.teams.find(t => t.id === gameState.buzzes[0].teamId)?.name} ha premuto!
                   </p>
                 </motion.div>
@@ -926,7 +965,7 @@ export default function App() {
                 <Trophy className="w-48 h-48 text-emerald-500 mx-auto relative" />
               </div>
               <h1 className="text-6xl font-black">PARTITA FINITA</h1>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
+              <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8">
                 <p className="text-zinc-500 uppercase tracking-widest font-bold mb-2">Vincitore</p>
                 <p className="text-4xl font-black text-emerald-500">
                   {gameState.teams.find(t => t.status === 'vincitrice')?.name || '---'}
@@ -938,7 +977,7 @@ export default function App() {
       </main>
 
       {/* Footer / Stats */}
-      <footer className="p-6 border-t border-zinc-800 bg-zinc-900/30">
+      <footer className="p-6 border-t border-zinc-200 bg-zinc-50/30">
         <div className="max-w-2xl mx-auto flex justify-between items-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
           <div className="flex items-center gap-2">
             <div className={cn("w-2 h-2 rounded-full", gameState.isQuestionActive ? "bg-emerald-500" : "bg-red-500")} />
@@ -1143,13 +1182,13 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 sm:p-8">
+    <div className="min-h-screen bg-white text-zinc-950 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <header className="flex flex-col sm:flex-row justify-between items-center gap-6 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
             <button
               onClick={onBack}
-              className="p-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+              className="p-3 bg-zinc-100 border border-zinc-200 rounded-2xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-200 transition-all"
               title="Torna alla selezione"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -1166,7 +1205,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
             <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <div className="relative group">
-                <label className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-2xl font-bold hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
+                <label className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
                   <FileText className="w-4 h-4" />
                   {isUploading ? 'Caricamento...' : 'Carica PDF'}
                   <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" disabled={isUploading} />
@@ -1191,14 +1230,14 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
         </header>
 
         {/* PDF Management Section - Now more prominent and closer to upload */}
-        <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4">
+        <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 File PDF Caricati
               </h3>
-              <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1 w-fit">
+              <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-1 w-fit">
                 <span className="text-[10px] font-bold text-zinc-500 uppercase">Destinazione:</span>
                 <select 
                   value={uploadPhase}
@@ -1230,7 +1269,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                   Svuota Tutto
                 </button>
               )}
-              <span className="text-[10px] font-bold text-zinc-600 bg-zinc-950 px-2 py-1 rounded-lg border border-zinc-800">
+              <span className="text-[10px] font-bold text-zinc-600 bg-white px-2 py-1 rounded-lg border border-zinc-200">
                 {gameState.uploadedFiles.length} FILE
               </span>
             </div>
@@ -1239,17 +1278,17 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
           {gameState.uploadedFiles.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {gameState.uploadedFiles.map(file => (
-                <div key={file} className="flex items-center justify-between gap-3 bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-2xl group hover:border-zinc-700 transition-all">
+                <div key={file} className="flex items-center justify-between gap-3 bg-white border border-zinc-200 px-4 py-3 rounded-2xl group hover:border-zinc-300 transition-all">
                   <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-4 h-4 text-zinc-600 shrink-0" />
-                    <span className="text-sm text-zinc-300 truncate font-medium">{file}</span>
+                    <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <span className="text-sm text-zinc-700 truncate font-medium">{file}</span>
                   </div>
                   <button 
                     onClick={() => {
                       // Removed confirm() to avoid iframe blocking issues
                       sendAction('DELETE_FILE', { fileName: file });
                     }}
-                    className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all shrink-0"
+                    className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all shrink-0"
                     title="Elimina file"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1258,21 +1297,21 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 border-2 border-dashed border-zinc-800 rounded-2xl">
-              <p className="text-zinc-600 text-sm italic">Nessun PDF caricato. Usa il pulsante sopra per iniziare.</p>
+            <div className="text-center py-8 border-2 border-dashed border-zinc-200 rounded-2xl">
+              <p className="text-zinc-400 text-sm italic">Nessun PDF caricato. Usa il pulsante sopra per iniziare.</p>
             </div>
           )}
         </section>
 
         {/* Music Management Section */}
-        <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4">
+        <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                 <Zap className="w-4 h-4 text-emerald-500" />
                 Musica per la Leaderboard
               </h3>
-              <p className="text-[10px] text-zinc-600">
+              <p className="text-[10px] text-zinc-500">
                 L'audio verrà riprodotto in loop sulla leaderboard quando il timer è attivo.
               </p>
             </div>
@@ -1285,7 +1324,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
           
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex gap-2 w-full sm:w-auto">
-              <label className="flex-1 sm:flex-none px-6 py-3 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-2xl font-bold hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
+              <label className="flex-1 sm:flex-none px-6 py-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
                 <Plus className="w-4 h-4" />
                 {isMusicUploading ? 'Caricamento...' : 'Carica MP3'}
                 <input type="file" accept="audio/*" onChange={handleMusicUpload} className="hidden" disabled={isMusicUploading} />
@@ -1310,7 +1349,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                     }}
                     className={cn(
                       "p-3 rounded-2xl border transition-all",
-                      isMusicPlaying ? "bg-emerald-500 text-zinc-950 border-emerald-400" : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white"
+                      isMusicPlaying ? "bg-emerald-500 text-zinc-950 border-emerald-400" : "bg-zinc-100 text-zinc-500 border-zinc-200 hover:text-zinc-950"
                     )}
                     title={isMusicPlaying ? "Ferma Test" : "Prova Audio"}
                   >
@@ -1326,7 +1365,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                         sendAction('DELETE_LEADERBOARD_MUSIC');
                       }
                     }}
-                    className="p-3 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-2xl hover:text-red-500 hover:bg-red-500/10 transition-all"
+                    className="p-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl hover:text-red-500 hover:bg-red-500/10 transition-all"
                     title="Elimina Musica"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -1335,7 +1374,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
               )}
             </div>
             {gameState.leaderboardMusicUrl && (
-              <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-2xl w-full sm:w-auto overflow-hidden">
+              <div className="flex items-center gap-3 bg-white border border-zinc-200 px-4 py-3 rounded-2xl w-full sm:w-auto overflow-hidden">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span className="text-xs text-zinc-500 truncate max-w-[200px]">
                   {gameState.leaderboardMusicUrl.includes('/uploads/') ? 'Musica Caricata' : 'Musica Predefinita'}
@@ -1348,23 +1387,23 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Game Controls */}
           <div className="lg:col-span-2 space-y-8">
-            <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2">
+            <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 space-y-6">
+              <h3 className="text-xl font-bold flex items-center gap-2 text-zinc-950">
                 <Zap className="w-5 h-5 text-emerald-500" />
                 Stato Partita
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Round</p>
                     <p className="text-lg font-black text-emerald-500">{gameState.round}</p>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: gameState.round + 1 })} className="p-1 hover:text-emerald-500"><ArrowUp className="w-3 h-3" /></button>
-                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: Math.max(1, gameState.round - 1) })} className="p-1 hover:text-emerald-500"><ArrowDown className="w-3 h-3" /></button>
+                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: gameState.round + 1 })} className="p-1 text-zinc-400 hover:text-emerald-500"><ArrowUp className="w-3 h-3" /></button>
+                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: Math.max(1, gameState.round - 1) })} className="p-1 text-zinc-400 hover:text-emerald-500"><ArrowDown className="w-3 h-3" /></button>
                   </div>
                 </div>
-                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200">
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Domanda</p>
                   <div className="flex items-center justify-between">
                     <p className="text-lg font-black text-emerald-500">{gameState.currentQuestionIndex}/10</p>
@@ -1372,33 +1411,46 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                       <button 
                         onClick={() => socketService.send({ type: 'PREVIOUS_QUESTION' })}
                         disabled={gameState.currentQuestionIndex <= 1}
-                        className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg hover:text-emerald-500 disabled:opacity-20"
+                        className="p-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 hover:text-emerald-500 disabled:opacity-20"
                       >
                         <ArrowLeft className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
                 </div>
-                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200">
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Squadre</p>
                   <p className="text-lg font-black text-emerald-500">{gameState.teams.length}</p>
                 </div>
-                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200">
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Stato</p>
                   <p className={cn("text-lg font-black", gameState.isQuestionActive ? "text-emerald-500" : "text-red-500")}>
                     {gameState.isQuestionActive ? 'ATTIVA' : 'INATTIVA'}
                   </p>
                 </div>
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Buzz</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-black text-amber-500">{gameState.buzzes.length}</p>
+                    <button 
+                      onClick={() => sendAction('CLEAR_BUZZES')}
+                      disabled={gameState.buzzes.length === 0}
+                      className="text-[10px] font-bold text-zinc-400 hover:text-zinc-950 disabled:opacity-20 uppercase tracking-widest"
+                    >
+                      Svuota
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {gameState.currentQuestion && (
-                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Domanda Corrente</p>
-                  <p className="text-xl font-bold">{gameState.currentQuestion.text}</p>
+                  <p className="text-xl font-bold text-zinc-950">{gameState.currentQuestion.text}</p>
                   {gameState.currentQuestion.options && (
                     <div className="grid grid-cols-2 gap-2">
                       {gameState.currentQuestion.options.map((opt, i) => (
-                        <div key={i} className={cn("p-3 rounded-xl border text-sm", i === gameState.currentQuestion?.correctAnswer ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-bold" : "bg-zinc-900 border-zinc-800 text-zinc-500")}>
+                        <div key={i} className={cn("p-3 rounded-xl border text-sm", i === gameState.currentQuestion?.correctAnswer ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 font-bold" : "bg-zinc-50 border-zinc-200 text-zinc-500")}>
                           {String.fromCharCode(65 + i)}: {opt}
                         </div>
                       ))}
@@ -1408,7 +1460,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
               )}
 
               {/* Question Queue Section */}
-              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
+              <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                   <ListOrdered className="w-4 h-4" />
                   Coda Domande ({gameState.questionQueue.length})
@@ -1418,40 +1470,40 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                     const q = allQuestionsFlat.find(item => item.id === qId);
                     if (!q) return null;
                     return (
-                      <div key={`${qId}-${idx}`} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-xl">
-                        <span className="w-6 h-6 bg-zinc-800 rounded-lg flex items-center justify-center text-[10px] font-black text-zinc-500">{idx + 1}</span>
+                      <div key={`${qId}-${idx}`} className="flex items-center gap-3 bg-zinc-50 border border-zinc-200 p-3 rounded-xl">
+                        <span className="w-6 h-6 bg-zinc-200 rounded-lg flex items-center justify-center text-[10px] font-black text-zinc-500">{idx + 1}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-300 truncate">{q.text}</p>
-                          <p className="text-[10px] text-zinc-600 uppercase font-bold">{q.source || 'default'}</p>
+                          <p className="text-sm font-medium text-zinc-700 truncate">{q.text}</p>
+                          <p className="text-[10px] text-zinc-400 uppercase font-bold">{q.source || 'default'}</p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => moveQueueItem(idx, 'up')} disabled={idx === 0} className="p-1.5 text-zinc-600 hover:text-emerald-500 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
-                          <button onClick={() => moveQueueItem(idx, 'down')} disabled={idx === gameState.questionQueue.length - 1} className="p-1.5 text-zinc-600 hover:text-emerald-500 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
-                          <button onClick={() => sendAction('REMOVE_FROM_QUEUE', { questionId: qId })} className="p-1.5 text-zinc-600 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => moveQueueItem(idx, 'up')} disabled={idx === 0} className="p-1.5 text-zinc-400 hover:text-emerald-500 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
+                          <button onClick={() => moveQueueItem(idx, 'down')} disabled={idx === gameState.questionQueue.length - 1} className="p-1.5 text-zinc-400 hover:text-emerald-500 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
+                          <button onClick={() => sendAction('REMOVE_FROM_QUEUE', { questionId: qId })} className="p-1.5 text-zinc-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                     );
                   })}
                   {gameState.questionQueue.length === 0 && (
-                    <p className="text-center text-zinc-700 text-sm py-4 italic">Coda vuota. Aggiungi domande dalla lista sotto.</p>
+                    <p className="text-center text-zinc-400 text-sm py-4 italic">Coda vuota. Aggiungi domande dalla lista sotto.</p>
                   )}
                 </div>
               </div>
 
               {/* Next Question Selector (Grouped by Source) */}
-              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
+              <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
                 <div className="flex justify-between items-center">
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Libreria Domande</p>
                 </div>
                 
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                   <input 
                     type="text" 
                     placeholder="Cerca tra le domande..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   />
                 </div>
 
@@ -1460,14 +1512,14 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                     <div key={source} className="space-y-2">
                       <button 
                         onClick={() => toggleSource(source)}
-                        className="w-full flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors"
+                        className="w-full flex items-center justify-between p-3 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          {expandedSources[source] ? <FolderOpen className="w-4 h-4 text-emerald-500" /> : <Folder className="w-4 h-4 text-zinc-500" />}
-                          <span className="text-sm font-bold text-zinc-300 truncate max-w-[250px]">{source}</span>
-                          <span className="text-[10px] bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">{questions.length}</span>
+                          {expandedSources[source] ? <FolderOpen className="w-4 h-4 text-emerald-500" /> : <Folder className="w-4 h-4 text-zinc-400" />}
+                          <span className="text-sm font-bold text-zinc-700 truncate max-w-[250px]">{source}</span>
+                          <span className="text-[10px] bg-zinc-200 text-zinc-500 px-2 py-0.5 rounded-full">{questions.length}</span>
                         </div>
-                        <ChevronRight className={cn("w-4 h-4 text-zinc-600 transition-transform", expandedSources[source] && "rotate-90")} />
+                        <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", expandedSources[source] && "rotate-90")} />
                       </button>
 
                       {expandedSources[source] && (
@@ -1479,25 +1531,25 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                                 "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-4",
                                 gameState.questionQueue.includes(q.id) 
                                   ? "bg-emerald-500/5 border-emerald-500/30" 
-                                  : "bg-zinc-900 border-zinc-800"
+                                  : "bg-white border-zinc-200"
                               )}
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <p className={cn("text-sm font-medium", gameState.questionQueue.includes(q.id) ? "text-emerald-500" : "text-zinc-300")}>
+                                  <p className={cn("text-sm font-medium", gameState.questionQueue.includes(q.id) ? "text-emerald-600" : "text-zinc-700")}>
                                     {q.text}
                                   </p>
                                   {/* Find which phase this question belongs to */}
                                   {Object.entries(gameState.allQuestions).map(([phase, qs]) => 
                                     qs.some(item => item.id === q.id) ? (
-                                      <span key={phase} className="text-[8px] bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-700 uppercase font-black">
+                                      <span key={phase} className="text-[8px] bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200 uppercase font-black">
                                         {phase}
                                       </span>
                                     ) : null
                                   )}
                                 </div>
                                 {q.options && (
-                                  <p className="text-[10px] text-zinc-500 truncate">
+                                  <p className="text-[10px] text-zinc-400 truncate">
                                     {q.options.join(' • ')}
                                   </p>
                                 )}
@@ -1514,7 +1566,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                                   "p-2 rounded-lg transition-all",
                                   gameState.questionQueue.includes(q.id)
                                     ? "bg-emerald-500 text-zinc-950"
-                                    : "bg-zinc-800 text-zinc-500 hover:bg-emerald-500 hover:text-zinc-950"
+                                    : "bg-zinc-100 text-zinc-400 hover:bg-emerald-500 hover:text-zinc-950"
                                 )}
                               >
                                 {gameState.questionQueue.includes(q.id) ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -1526,7 +1578,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                     </div>
                   ))}
                   {Object.keys(questionsBySource).length === 0 && (
-                    <p className="text-center text-zinc-600 text-sm py-4 italic">Nessuna domanda trovata</p>
+                    <p className="text-center text-zinc-400 text-sm py-4 italic">Nessuna domanda trovata</p>
                   )}
                 </div>
               </div>
@@ -1562,26 +1614,26 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
 
             {/* Buzz List */}
             {gameState.buzzes.length > 0 && (
-              <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-4">
+              <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold">Ordine di Buzz</h3>
+                  <h3 className="text-xl font-bold text-zinc-950">Ordine di Buzz</h3>
                   <button 
                     onClick={() => sendAction('RESET_BUZZES')}
-                    className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-widest px-3 py-1 bg-zinc-800 rounded-lg border border-zinc-700 transition-all"
+                    className="text-[10px] font-bold text-zinc-500 hover:text-zinc-950 uppercase tracking-widest px-3 py-1 bg-zinc-100 rounded-lg border border-zinc-200 transition-all"
                   >
                     Resetta Buzz
                   </button>
                 </div>
                 <div className="space-y-2">
                   {gameState.buzzes.map((buzz, i) => (
-                    <div key={buzz.teamId} className={cn("flex justify-between items-center p-4 rounded-2xl border", i === 0 ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20" : "bg-zinc-950 border-zinc-800 opacity-60")}>
+                    <div key={buzz.teamId} className={cn("flex justify-between items-center p-4 rounded-2xl border", i === 0 ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20" : "bg-white border-zinc-200 opacity-60")}>
                       <div className="flex items-center gap-4">
-                        <span className={cn("w-8 h-8 flex items-center justify-center rounded-full font-black text-sm", i === 0 ? "bg-emerald-500 text-zinc-950" : "bg-zinc-800 text-zinc-500")}>
+                        <span className={cn("w-8 h-8 flex items-center justify-center rounded-full font-black text-sm", i === 0 ? "bg-emerald-500 text-zinc-950" : "bg-zinc-100 text-zinc-500")}>
                           {i + 1}
                         </span>
-                        <span className="font-bold text-lg">{gameState.teams.find(t => t.id === buzz.teamId)?.name}</span>
+                        <span className="font-bold text-lg text-zinc-950">{gameState.teams.find(t => t.id === buzz.teamId)?.name}</span>
                       </div>
-                      <span className="text-xs font-mono text-zinc-500">+{((buzz.timestamp - gameState.buzzes[0].timestamp) / 1000).toFixed(3)}s</span>
+                      <span className="text-xs font-mono text-zinc-400">+{((buzz.timestamp - gameState.buzzes[0].timestamp) / 1000).toFixed(3)}s</span>
                     </div>
                   ))}
                 </div>
@@ -1590,8 +1642,8 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
 
             {/* Match Details */}
             {(gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && (
-              <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-6">
-                <h3 className="text-xl font-bold">Dettagli Scontri</h3>
+              <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 space-y-6">
+                <h3 className="text-xl font-bold text-zinc-950">Dettagli Scontri</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {gameState.phase === 'SEMIS' && gameState.semisMatches && (
                     <>
@@ -1611,24 +1663,24 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
 
           {/* Teams List */}
           <div className="space-y-8">
-            <section className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2">
+            <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 space-y-6">
+              <h3 className="text-xl font-bold flex items-center gap-2 text-zinc-950">
                 <Users className="w-5 h-5 text-emerald-500" />
                 Squadre
               </h3>
               <div className="space-y-4">
                 {[...gameState.teams].sort((a, b) => b.score - a.score).map(team => (
-                  <div key={team.id} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                  <div key={team.id} className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold">{team.name}</p>
-                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">{team.status}</p>
+                        <p className="font-bold text-zinc-950">{team.name}</p>
+                        <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">{team.status}</p>
                       </div>
                       <p className="text-xl font-black text-emerald-500">{team.score}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => sendAction('UPDATE_SCORE', { teamId: team.id, amount: 1 })} className="flex-1 bg-zinc-900 hover:bg-zinc-800 p-2 rounded-xl text-xs font-bold border border-zinc-800">+1</button>
-                      <button onClick={() => sendAction('UPDATE_SCORE', { teamId: team.id, amount: -1 })} className="flex-1 bg-zinc-900 hover:bg-zinc-800 p-2 rounded-xl text-xs font-bold border border-zinc-800">-1</button>
+                      <button onClick={() => sendAction('UPDATE_SCORE', { teamId: team.id, amount: 1 })} className="flex-1 bg-zinc-50 hover:bg-zinc-100 p-2 rounded-xl text-xs font-bold border border-zinc-200 text-zinc-500">+1</button>
+                      <button onClick={() => sendAction('UPDATE_SCORE', { teamId: team.id, amount: -1 })} className="flex-1 bg-zinc-50 hover:bg-zinc-100 p-2 rounded-xl text-xs font-bold border border-zinc-200 text-zinc-500">-1</button>
                       <button onClick={() => sendAction('DELETE_TEAM', { teamId: team.id })} className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-all">
                         <LogOut className="w-4 h-4" />
                       </button>
@@ -1636,7 +1688,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                   </div>
                 ))}
                 {gameState.teams.length === 0 && (
-                  <p className="text-center text-zinc-600 italic py-8">Nessuna squadra collegata</p>
+                  <p className="text-center text-zinc-400 italic py-8">Nessuna squadra collegata</p>
                 )}
               </div>
             </section>
@@ -1652,30 +1704,30 @@ function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onSco
   const teamB = teams.find(t => t.id === match.teamBId);
 
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-6">
+    <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-6">
       <div className="flex justify-between items-center gap-4">
         <div className="flex-1 text-center space-y-2">
-          <p className="font-bold truncate">{teamA?.name}</p>
+          <p className="font-bold truncate text-zinc-950">{teamA?.name}</p>
           <p className="text-4xl font-black text-emerald-500">{match.scoreA}</p>
           <div className="flex gap-1 justify-center">
-            <button onClick={() => onScore(match.teamAId, 1)} className="w-8 h-8 bg-zinc-900 rounded-lg text-xs font-bold border border-zinc-800">+</button>
-            <button onClick={() => onScore(match.teamAId, -1)} className="w-8 h-8 bg-zinc-900 rounded-lg text-xs font-bold border border-zinc-800">-</button>
+            <button onClick={() => onScore(match.teamAId, 1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-emerald-500 hover:text-zinc-950 transition-all">+</button>
+            <button onClick={() => onScore(match.teamAId, -1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-red-500 hover:text-white transition-all">-</button>
           </div>
         </div>
-        <div className="text-zinc-700 font-black italic">VS</div>
+        <div className="text-zinc-300 font-black italic">VS</div>
         <div className="flex-1 text-center space-y-2">
-          <p className="font-bold truncate">{teamB?.name}</p>
+          <p className="font-bold truncate text-zinc-950">{teamB?.name}</p>
           <p className="text-4xl font-black text-emerald-500">{match.scoreB}</p>
           <div className="flex gap-1 justify-center">
-            <button onClick={() => onScore(match.teamBId, 1)} className="w-8 h-8 bg-zinc-900 rounded-lg text-xs font-bold border border-zinc-800">+</button>
-            <button onClick={() => onScore(match.teamBId, -1)} className="w-8 h-8 bg-zinc-900 rounded-lg text-xs font-bold border border-zinc-800">-</button>
+            <button onClick={() => onScore(match.teamBId, 1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-emerald-500 hover:text-zinc-950 transition-all">+</button>
+            <button onClick={() => onScore(match.teamBId, -1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-red-500 hover:text-white transition-all">-</button>
           </div>
         </div>
       </div>
       {match.winnerId && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center">
           <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Vincitore</p>
-          <p className="font-black">{teams.find(t => t.id === match.winnerId)?.name}</p>
+          <p className="font-black text-zinc-950">{teams.find(t => t.id === match.winnerId)?.name}</p>
         </div>
       )}
     </div>
@@ -1692,11 +1744,11 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                     gameState.phase === 'FINAL' ? 'Finale' : 'Gara';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 sm:p-8 flex flex-col items-center overflow-x-hidden">
+    <div className="min-h-screen bg-white text-zinc-950 p-4 sm:p-8 flex flex-col items-center overflow-x-hidden">
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="fixed top-4 left-4 sm:top-8 sm:left-8 z-40 p-3 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+        className="fixed top-4 left-4 sm:top-8 sm:left-8 z-40 p-3 bg-white/50 backdrop-blur-sm border border-zinc-200 rounded-2xl text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 transition-all"
         title="Torna alla selezione"
       >
         <ArrowLeft className="w-5 h-5" />
@@ -1709,15 +1761,15 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
             // This button allows manual unlocking if needed
             playSyntheticSound('beep');
           }}
-          className="p-3 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white transition-all"
+          className="p-3 bg-white border border-zinc-200 rounded-full text-zinc-400 hover:text-zinc-950 transition-all shadow-lg"
           title="Test Suono"
         >
           <Zap className="w-4 h-4" />
         </button>
         <div 
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all",
-            audioEnabled ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+            "flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg",
+            audioEnabled ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "bg-red-500/10 border-red-500/20 text-red-600"
           )}
         >
           <div className={cn("w-2 h-2 rounded-full", audioEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
@@ -1725,12 +1777,42 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
         </div>
       </div>
       <AnimatePresence>
+        {gameState.buzzes.length > 0 && gameState.isQuestionActive && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[80] w-full max-w-2xl px-4"
+          >
+            <div className="bg-amber-500 border-4 border-amber-400 rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(245,158,11,0.4)] flex items-center gap-6 overflow-hidden relative">
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 1 }}
+                className="w-20 h-20 bg-zinc-950 rounded-2xl flex items-center justify-center shrink-0"
+              >
+                <Zap className="w-10 h-10 text-amber-500" />
+              </motion.div>
+              <div className="flex-1 min-w-0">
+                <p className="text-zinc-950 text-xs font-black uppercase tracking-[0.2em] mb-1">Prenotazione Risposta</p>
+                <h2 className="text-3xl sm:text-5xl font-black text-zinc-950 truncate uppercase tracking-tighter">
+                  {gameState.teams.find(t => t.id === gameState.buzzes[0].teamId)?.name}
+                </h2>
+              </div>
+              <div className="absolute -right-4 -bottom-4 opacity-20">
+                <Zap className="w-32 h-32 text-zinc-950" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {gameState.showRoundWinner && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-zinc-950/95 flex flex-col items-center justify-center p-6 text-center"
+            className="fixed inset-0 z-[100] bg-white/95 flex flex-col items-center justify-center p-6 text-center"
           >
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
@@ -1741,8 +1823,8 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                 <Trophy className="w-16 h-16 text-amber-500" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-4xl sm:text-6xl font-black text-white">Round {gameState.round} terminato</h2>
-                <p className="text-xl sm:text-2xl text-zinc-400 font-medium">
+                <h2 className="text-4xl sm:text-6xl font-black text-zinc-950">Round {gameState.round} terminato</h2>
+                <p className="text-xl sm:text-2xl text-zinc-500 font-medium">
                   Questo round è stato vinto dalla squadra:
                 </p>
               </div>
@@ -1765,7 +1847,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-md p-6 text-center"
+            className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-white/90 backdrop-blur-md p-6 text-center"
           >
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
@@ -1776,10 +1858,10 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                 <CheckCircle2 className="w-16 h-16 text-emerald-500" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-4xl sm:text-7xl font-black text-white uppercase tracking-tight">
+                <h2 className="text-4xl sm:text-7xl font-black text-zinc-950 uppercase tracking-tight">
                   Tutte le squadre hanno risposto
                 </h2>
-                <p className="text-xl sm:text-2xl text-zinc-500 font-bold uppercase tracking-widest animate-pulse">
+                <p className="text-xl sm:text-2xl text-zinc-400 font-bold uppercase tracking-widest animate-pulse">
                   Preparatevi per il prossimo round...
                 </p>
               </div>
@@ -1794,14 +1876,14 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm"
           >
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               className="text-center space-y-8"
             >
-              <h2 className="text-4xl sm:text-6xl font-black text-zinc-500 uppercase tracking-[0.3em]">
+              <h2 className="text-4xl sm:text-6xl font-black text-zinc-300 uppercase tracking-[0.3em]">
                 {gameState.countdownType === 'QUESTION_ENDING' ? 'Fine Domanda' : 'Prossima Domanda'}
               </h2>
               <motion.div 
@@ -1837,17 +1919,17 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
             seconds={gameState.timer} 
             active={gameState.timerActive} 
             endTime={gameState.timerEndTime}
-            className="flex items-center gap-4 px-8 py-4 rounded-3xl font-mono font-black text-4xl sm:text-7xl transition-all shadow-2xl"
+            className="flex items-center gap-4 px-8 py-4 rounded-3xl font-mono font-black text-4xl sm:text-7xl transition-all shadow-2xl bg-white text-zinc-950 border border-zinc-100"
           />
 
           <div className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 hidden sm:block" /> {/* Spacer */}
         </div>
         
         <div className="space-y-2">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4">Classifica Real-Time</h1>
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950">Classifica Real-Time</h1>
           <div className="flex flex-col items-center gap-1">
             <p className="text-emerald-500 text-sm sm:text-lg font-black uppercase tracking-[0.3em]">Round {gameState.round} | {roundType}</p>
-            <p className="text-zinc-500 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}/10</p>
+            <p className="text-zinc-400 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}/10</p>
           </div>
         </div>
       </motion.div>
@@ -1871,7 +1953,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                     Domanda in corso
                   </div>
                 </div>
-                <h3 className="text-2xl sm:text-4xl font-black text-white leading-tight">
+                <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 leading-tight">
                   {gameState.currentQuestion.text}
                 </h3>
               </div>
@@ -1896,10 +1978,10 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className={cn(
-                  "relative overflow-hidden bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex items-center justify-between shadow-xl",
-                  isFirst && "border-amber-500/50 bg-amber-500/5",
-                  isSecond && "border-zinc-400/50 bg-zinc-400/5",
-                  isThird && "border-orange-700/50 bg-orange-700/5"
+                  "relative overflow-hidden bg-white border border-zinc-100 rounded-3xl p-6 flex items-center justify-between shadow-xl",
+                  isFirst && "border-amber-500/50 bg-amber-50/50",
+                  isSecond && "border-zinc-200 bg-zinc-50/50",
+                  isThird && "border-orange-200 bg-orange-50/50"
                 )}
               >
                 {isFirst && (
@@ -1912,9 +1994,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                   <div className={cn(
                     "w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black shadow-inner",
                     isFirst ? "bg-amber-500 text-zinc-950" :
-                    isSecond ? "bg-zinc-400 text-zinc-950" :
-                    isThird ? "bg-orange-700 text-white" :
-                    "bg-zinc-950 text-zinc-500 border border-zinc-800"
+                    isSecond ? "bg-zinc-200 text-zinc-600" :
+                    isThird ? "bg-orange-100 text-orange-700" :
+                    "bg-zinc-50 text-zinc-400 border border-zinc-100"
                   )}>
                     {isFirst ? (
                       <div className="relative">
@@ -1934,7 +2016,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                   <div>
                     <h3 className={cn(
                       "text-2xl font-black tracking-tight",
-                      isFirst ? "text-amber-500" : "text-white"
+                      isFirst ? "text-amber-600" : "text-zinc-950"
                     )}>
                       {team.name}
                     </h3>
@@ -1943,7 +2025,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                         "w-2 h-2 rounded-full",
                         team.status === 'eliminata' ? "bg-red-500" : "bg-emerald-500"
                       )} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                         {team.status}
                       </span>
                     </div>
@@ -1951,10 +2033,10 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
                 </div>
 
                 <div className="text-right relative z-10">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Punteggio</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Punteggio</p>
                   <p className={cn(
                     "text-4xl font-black",
-                    isFirst ? "text-amber-500" : "text-white"
+                    isFirst ? "text-amber-600" : "text-zinc-950"
                   )}>
                     {team.score}
                   </p>
@@ -1965,9 +2047,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
         </AnimatePresence>
 
         {sortedTeams.length === 0 && (
-          <div className="text-center py-20 bg-zinc-900/50 border border-dashed border-zinc-800 rounded-3xl">
-            <Users className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-            <p className="text-zinc-500 font-medium">Nessuna squadra collegata</p>
+          <div className="text-center py-20 bg-zinc-50 border border-dashed border-zinc-200 rounded-3xl">
+            <Users className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
+            <p className="text-zinc-400 font-medium">Nessuna squadra collegata</p>
           </div>
         )}
       </div>
