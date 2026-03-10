@@ -799,13 +799,27 @@ export default function App() {
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold text-zinc-950">Errore di Connessione</h3>
                     <p className="text-zinc-500 text-sm">{connectionError}</p>
+                    <p className="text-[10px] text-zinc-400 italic mt-2">Consiglio: Le reti mobili spesso bloccano queste connessioni. Usa il Wi-Fi se possibile.</p>
                   </div>
-                  <button
-                    onClick={() => setView('SELECTION')}
-                    className="w-full py-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
-                  >
-                    Torna Indietro
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        peerService.reset();
+                        peerService.connect(roomId.trim());
+                        setConnectionError(null);
+                        setIsConnecting(true);
+                      }}
+                      className="w-full py-4 bg-emerald-500 text-zinc-950 font-bold rounded-2xl hover:bg-emerald-400 transition-all"
+                    >
+                      Riprova
+                    </button>
+                    <button
+                      onClick={() => setView('SELECTION')}
+                      className="w-full py-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
+                    >
+                      Torna Indietro
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>
@@ -874,9 +888,24 @@ export default function App() {
             </div>
 
             {connectionError && (
-              <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-600 font-medium leading-relaxed">{connectionError}</p>
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs text-red-600 font-medium leading-relaxed">{connectionError}</p>
+                    <p className="text-[10px] text-red-400 italic">Consiglio: Se sei su rete mobile, prova a collegarti al Wi-Fi dell'Admin.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    peerService.reset();
+                    handleJoin({ preventDefault: () => {} } as any);
+                  }}
+                  className="w-full py-3 bg-zinc-100 text-zinc-600 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-all"
+                >
+                  Riprova Connessione
+                </button>
               </div>
             )}
 
@@ -1278,24 +1307,37 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
           fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
         }
 
-        console.log("Extracted text from PDF, sending to Gemini for parsing...");
+        if (!fullText.trim()) {
+          alert("Il PDF sembra essere vuoto o non contiene testo estraibile (potrebbe essere un'immagine). Prova con un PDF testuale.");
+          setIsUploading(false);
+          return;
+        }
+
+        console.log("Extracted text from PDF, length:", fullText.length, "characters. Sending to Gemini...");
         
         try {
+          // Truncate text if it's excessively large to avoid context limits
+          const truncatedText = fullText.length > 100000 ? fullText.substring(0, 100000) + "..." : fullText;
+
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
           const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.1-flash-lite-preview",
             contents: `Analizza il seguente testo estratto da un PDF e convertilo in un array JSON di domande per un quiz.
-            Il testo può contenere domande numerate, opzioni (A, B, C, D) e l'indicazione della risposta corretta (es. "Risposta: A", o un segno di spunta).
             
-            REGOLE:
-            1. Ogni domanda deve avere: "text" (la domanda), "options" (un array di esattamente 4 stringhe), "correctAnswer" (indice 0-3 della risposta corretta), "difficulty" (sempre "difficile").
-            2. Se mancano opzioni, prova a dedurle dal contesto o ignora la domanda.
-            3. Assicurati che il testo della domanda sia pulito e non includa il numero della domanda.
-            4. Se trovi informazioni extra come "(4.411 metri)", includile nel testo della domanda o nell'opzione pertinente, non come opzione separata.
+            REGOLE DI FORMATTAZIONE:
+            1. Restituisci SOLO l'array JSON.
+            2. Ogni oggetto deve avere:
+               - "text": la domanda pulita (senza numeri o prefissi)
+               - "options": array di esattamente 4 stringhe
+               - "correctAnswer": numero intero (0-3) che indica la posizione della risposta corretta nell'array options
+               - "difficulty": stringa, usa "difficile" per impostazione predefinita
+            3. Se il testo è confuso, cerca di estrarre le informazioni più sensate.
+            4. Se trovi molte domande, estrai solo le più significative per evitare timeout.
             
-            TESTO:
-            ${fullText}`,
+            TESTO DA ANALIZZARE:
+            ${truncatedText}`,
             config: {
+              systemInstruction: "Sei un assistente esperto nella creazione di quiz. Il tuo compito è estrarre domande e risposte da testi grezzi e formattarli rigorosamente in JSON secondo lo schema richiesto. Sii preciso nell'individuare la risposta corretta.",
               responseMimeType: "application/json",
               responseSchema: {
                 type: Type.ARRAY,
@@ -1316,7 +1358,10 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
             }
           });
 
-          const questions = JSON.parse(response.text || "[]").map((q: any, idx: number) => ({
+          const responseText = response.text;
+          if (!responseText) throw new Error("Risposta vuota dall'IA");
+
+          const questions = JSON.parse(responseText).map((q: any, idx: number) => ({
             ...q,
             id: `uploaded_${Date.now()}_${idx}`
           }));
@@ -1330,7 +1375,14 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
           }
         } catch (aiErr: any) {
           console.error("Gemini Parsing Error:", aiErr);
-          alert("Errore durante l'analisi delle domande con l'IA. Prova a caricare un file più piccolo o controlla la connessione.");
+          const errorMsg = aiErr.message || "Errore sconosciuto";
+          if (errorMsg.includes("SAFETY")) {
+            alert("Il contenuto del PDF è stato bloccato dai filtri di sicurezza dell'IA.");
+          } else if (errorMsg.includes("QUOTA")) {
+            alert("Limite di richieste raggiunto. Riprova tra un minuto.");
+          } else {
+            alert(`Errore durante l'analisi delle domande: ${errorMsg}. Prova a caricare un file più piccolo o controlla la connessione.`);
+          }
         }
       };
       reader.readAsArrayBuffer(file);
@@ -1409,19 +1461,27 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-black">Admin Dashboard</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-zinc-500 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
-                {myPeerId && (
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(myPeerId);
-                      alert("ID Stanza copiato!");
-                    }}
-                    className="p-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-400 hover:text-emerald-500"
-                    title="Copia ID"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
+              <div className="flex flex-col gap-1 mt-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-zinc-500 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
+                  {myPeerId && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(myPeerId);
+                        alert("ID Stanza copiato!");
+                      }}
+                      className="p-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
+                      title="Copia ID"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                  <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Sei su mobile: usa il Wi-Fi per evitare blocchi di rete
+                  </p>
                 )}
               </div>
             </div>

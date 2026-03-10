@@ -29,13 +29,19 @@ class PeerService {
     
     this.peer = new Peer(id, {
       debug: 3,
+      secure: window.location.protocol === 'https:',
       config: {
         'iceServers': [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun.services.mozilla.com' }
-        ]
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
+          { urls: 'stun:stun.services.mozilla.com' },
+          { urls: 'stun:stun.stunprotocol.org' }
+        ],
+        'sdpSemantics': 'unified-plan',
+        'iceCandidatePoolSize': 10
       }
     });
     
@@ -77,6 +83,16 @@ class PeerService {
       console.log('PeerJS: Disconnected from signaling server');
       this.peer?.reconnect();
     });
+  }
+
+  reset() {
+    console.log('PeerJS: Resetting network service...');
+    if (this.timerInterval) clearInterval(this.timerInterval);
+    if (this.countdownInterval) clearInterval(this.countdownInterval);
+    this.connections.forEach(conn => conn.close());
+    this.connections.clear();
+    this.peer?.destroy();
+    this.initializePeer();
   }
 
   getPeerId(): string | undefined {
