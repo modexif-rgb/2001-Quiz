@@ -110,6 +110,8 @@ export default function App() {
   const [roomId, setRoomId] = useState('');
   const [myPeerId, setMyPeerId] = useState<string | null>(null);
   const [isRolePopupOpen, setIsRolePopupOpen] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLeaderboard, setIsLeaderboard] = useState(false);
@@ -370,10 +372,17 @@ export default function App() {
       console.log('Received message from peer:', msg.type);
       if (msg.type === 'STATE_UPDATE' && msg.state) {
         setGameState(msg.state);
+        setIsConnecting(false);
+        setConnectionError(null);
       }
       if (msg.type === 'JOIN_SUCCESS' && msg.team) {
         setMyTeam(msg.team);
         localStorage.setItem('myTeam', JSON.stringify(msg.team));
+        setIsConnecting(false);
+      }
+      if (msg.type === 'CONNECTION_ERROR') {
+        setConnectionError(msg.error);
+        setIsConnecting(false);
       }
     });
 
@@ -416,11 +425,25 @@ export default function App() {
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (teamName.trim() && roomId.trim()) {
+      setIsConnecting(true);
+      setConnectionError(null);
       peerService.connect(roomId.trim());
+      
       // Wait a bit for connection before sending join
-      setTimeout(() => {
+      const joinTimeout = setTimeout(() => {
         peerService.send({ type: 'JOIN_TEAM', name: teamName });
-      }, 1000);
+      }, 2000);
+
+      // Safety timeout for connection
+      setTimeout(() => {
+        setIsConnecting(prev => {
+          if (prev) {
+            setConnectionError("La connessione sta impiegando troppo tempo. Verifica l'ID Stanza.");
+            return false;
+          }
+          return false;
+        });
+      }, 10000);
     }
   };
 
@@ -753,19 +776,39 @@ export default function App() {
     return <AdminDashboard gameState={gameState!} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
   }
 
-  if (isLeaderboard) {
-    if (!gameState) {
-      return (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-zinc-500 font-bold animate-pulse">Connessione alla stanza...</p>
+    if (isLeaderboard) {
+      if (!gameState) {
+        return (
+          <div className="min-h-screen bg-white flex items-center justify-center p-6">
+            <div className="text-center space-y-6 max-w-xs">
+              {connectionError ? (
+                <>
+                  <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto">
+                    <AlertCircle className="w-8 h-8 text-red-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-zinc-950">Errore di Connessione</h3>
+                    <p className="text-zinc-500 text-sm">{connectionError}</p>
+                  </div>
+                  <button
+                    onClick={() => setView('SELECTION')}
+                    className="w-full py-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
+                  >
+                    Torna Indietro
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-zinc-500 font-bold animate-pulse">Connessione alla stanza...</p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
+      return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
     }
-    return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
-  }
 
   if (!myTeam) {
     return (
@@ -800,7 +843,10 @@ export default function App() {
                   value={roomId}
                   onChange={(e) => setRoomId(e.target.value)}
                   placeholder="Es. 12345678"
-                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  className={cn(
+                    "w-full bg-white border rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
+                    connectionError ? "border-red-200" : "border-zinc-200"
+                  )}
                   required
                 />
               </div>
@@ -816,12 +862,33 @@ export default function App() {
                 />
               </div>
             </div>
+
+            {connectionError && (
+              <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-600 font-medium leading-relaxed">{connectionError}</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+              disabled={isConnecting}
+              className={cn(
+                "w-full py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 font-bold",
+                isConnecting ? "bg-zinc-100 text-zinc-400 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-400 text-zinc-950"
+              )}
             >
-              Entra in partita
-              <ChevronRight className="w-5 h-5" />
+              {isConnecting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-500 rounded-full animate-spin" />
+                  Connessione...
+                </>
+              ) : (
+                <>
+                  Entra in partita
+                  <ChevronRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </form>
 

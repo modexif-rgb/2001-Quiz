@@ -17,8 +17,20 @@ class PeerService {
   private onIdCallbacks: Set<(id: string) => void> = new Set();
 
   constructor() {
+    this.initializePeer();
+  }
+
+  private initializePeer() {
     const generate8DigitId = () => Math.floor(10000000 + Math.random() * 90000000).toString();
-    this.peer = new Peer(generate8DigitId());
+    const id = generate8DigitId();
+    
+    // Explicit configuration for PeerJS cloud server to ensure compatibility with HTTPS
+    this.peer = new Peer(id, {
+      debug: 1,
+      secure: true,
+      host: '0.peerjs.com',
+      port: 443
+    });
     
     this.peer.on('open', (id) => {
       console.log('My peer ID is: ' + id);
@@ -34,8 +46,21 @@ class PeerService {
       }
     });
 
-    this.peer.on('error', (err) => {
-      console.error('Peer error:', err);
+    this.peer.on('error', (err: any) => {
+      console.error('Peer error:', err.type, err);
+      if (err.type === 'unavailable-id') {
+        console.log('ID taken, retrying with new ID...');
+        this.peer?.destroy();
+        this.initializePeer();
+      } else if (err.type === 'peer-unavailable') {
+        // This happens if the host ID we are trying to connect to is wrong
+        this.callbacks.forEach(cb => cb({ type: 'CONNECTION_ERROR', error: 'Stanza non trovata. Verifica l\'ID.' }));
+      }
+    });
+
+    this.peer.on('disconnected', () => {
+      console.log('Peer disconnected, reconnecting...');
+      this.peer?.reconnect();
     });
   }
 
@@ -540,28 +565,44 @@ class PeerService {
   connect(hostId: string) {
     this.isHost = false;
     this.hostId = hostId;
-    const conn = this.peer!.connect(hostId);
     
-    conn.on('open', () => {
-      console.log('Connected to host:', hostId);
-      this.connections.set(hostId, conn);
-    });
+    const performConnect = () => {
+      console.log('Attempting to connect to host:', hostId);
+      const conn = this.peer!.connect(hostId, {
+        reliable: true
+      });
+      
+      conn.on('open', () => {
+        console.log('Connected to host:', hostId);
+        this.connections.set(hostId, conn);
+      });
 
-    conn.on('data', (data: any) => {
-      console.log('Client received data:', data);
-      this.callbacks.forEach(cb => cb(data));
-    });
+      conn.on('data', (data: any) => {
+        console.log('Client received data:', data);
+        this.callbacks.forEach(cb => cb(data));
+      });
 
-    conn.on('close', () => {
-      console.log('Connection to host closed');
-      this.connections.delete(hostId);
-      // Try to reconnect
-      setTimeout(() => this.connect(hostId), 2000);
-    });
+      conn.on('close', () => {
+        console.log('Connection to host closed');
+        this.connections.delete(hostId);
+        // Try to reconnect if we still have a hostId
+        if (this.hostId === hostId) {
+          setTimeout(() => this.connect(hostId), 3000);
+        }
+      });
 
-    conn.on('error', (err) => {
-      console.error('Connection error:', err);
-    });
+      conn.on('error', (err) => {
+        console.error('Connection error:', err);
+        this.callbacks.forEach(cb => cb({ type: 'CONNECTION_ERROR', error: 'Errore durante la connessione alla stanza.' }));
+      });
+    };
+
+    if (this.peer?.open) {
+      performConnect();
+    } else {
+      console.log('Peer not open yet, waiting...');
+      this.peer?.once('open', () => performConnect());
+    }
   }
 
   subscribe(cb: MessageCallback) {
