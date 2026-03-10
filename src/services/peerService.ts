@@ -17,7 +17,8 @@ class PeerService {
   private onIdCallbacks: Set<(id: string) => void> = new Set();
 
   constructor() {
-    this.peer = new Peer();
+    const generate8DigitId = () => Math.floor(10000000 + Math.random() * 90000000).toString();
+    this.peer = new Peer(generate8DigitId());
     
     this.peer.on('open', (id) => {
       console.log('My peer ID is: ' + id);

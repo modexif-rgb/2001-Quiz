@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { peerService } from './services/peerService';
 import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2 } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -109,6 +109,7 @@ export default function App() {
   const [passwordError, setPasswordError] = useState(false);
   const [roomId, setRoomId] = useState('');
   const [myPeerId, setMyPeerId] = useState<string | null>(null);
+  const [isRolePopupOpen, setIsRolePopupOpen] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLeaderboard, setIsLeaderboard] = useState(false);
@@ -482,62 +483,130 @@ export default function App() {
 
   if (view === 'SELECTION') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[100px]" />
+
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-50 border border-zinc-200 rounded-3xl p-8 shadow-2xl space-y-8"
+          className="w-full max-w-md bg-white border border-zinc-100 rounded-[3rem] p-10 shadow-[0_30px_100px_rgba(0,0,0,0.08)] space-y-12 relative z-10"
         >
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Trophy className="w-8 h-8 text-emerald-500" />
+            <motion.button 
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsRolePopupOpen(true)}
+              className="w-24 h-24 bg-emerald-500/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 cursor-pointer hover:bg-emerald-500/20 transition-all group relative"
+            >
+              <Trophy className="w-10 h-10 text-emerald-500 group-hover:scale-110 transition-transform" />
+              <div className="absolute -bottom-1 -right-1 bg-white border border-zinc-100 p-2 rounded-xl shadow-sm">
+                <Settings className="w-3.5 h-3.5 text-zinc-400" />
+              </div>
+            </motion.button>
+            <div className="space-y-1">
+              <h1 className="text-4xl font-black text-zinc-950 tracking-tight">
+                Benvenuto <span className="text-emerald-500">al Quiz</span>
+              </h1>
+              <div className="flex items-center justify-center gap-3">
+                <div className="h-[1px] w-12 bg-zinc-200" />
+                <p className="text-zinc-500 font-black uppercase tracking-[0.4em] text-sm">2001 Domande</p>
+                <div className="h-[1px] w-12 bg-zinc-200" />
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-zinc-950">Benvenuto</h1>
-            <p className="text-zinc-600">Seleziona il tuo ruolo per continuare</p>
           </div>
 
-          <div className="grid gap-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">ID Stanza (necessario per Squadre e Leaderboard)</p>
-                <input
-                  type="text"
-                  placeholder="Inserisci ID Stanza..."
-                  value={roomId}
-                  onChange={(e) => setRoomId(e.target.value)}
-                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
-                />
+          <div className="space-y-4">
+            <motion.button
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.9, rotate: -1 }}
+              onClick={() => handleRoleSelect('TEAM')}
+              className="w-full py-10 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 shadow-[0_20px_50px_rgba(16,185,129,0.3)] group relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/30 to-transparent rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+              
+              <div className="w-16 h-16 bg-zinc-950/10 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-zinc-950/20 transition-all duration-500 relative z-10">
+                <Users className="w-8 h-8 text-zinc-950" />
               </div>
               
-              <button
-                onClick={() => handleRoleSelect('TEAM')}
-                disabled={!roomId.trim()}
-                className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                <Users className="w-5 h-5 text-emerald-500" />
-                Accedi come Squadra
-              </button>
-              <button
-                onClick={() => handleRoleSelect('LEADERBOARD')}
-                className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
-              >
-                <ListOrdered className="w-5 h-5 text-emerald-500" />
-                Accedi come Leaderboard
-              </button>
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-200"></div></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-zinc-50 px-2 text-zinc-400 font-bold">Oppure crea una stanza</span></div>
+              <div className="space-y-1 relative z-10">
+                <span className="text-2xl tracking-tight block">ACCEDI COME SQUADRA</span>
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-950/60 font-bold uppercase tracking-[0.2em]">
+                  <span className="w-1 h-1 bg-zinc-950 rounded-full animate-pulse" />
+                  <span>Inizia la sfida</span>
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
-              <button
-                onClick={() => handleRoleSelect('ADMIN')}
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
-              >
-                <Settings className="w-5 h-5" />
-                Crea Stanza (Admin)
-              </button>
-            </div>
+            </motion.button>
           </div>
         </motion.div>
+
+        {/* Role Selection Popup */}
+        <AnimatePresence>
+          {isRolePopupOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsRolePopupOpen(false)}
+                className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl relative z-10 space-y-6"
+              >
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-black text-zinc-950 uppercase tracking-tight">Opzioni Avanzate</h2>
+                  <button 
+                    onClick={() => setIsRolePopupOpen(false)}
+                    className="p-2 hover:bg-zinc-100 rounded-xl transition-colors"
+                  >
+                    <X className="w-5 h-5 text-zinc-400" />
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <button
+                    onClick={() => {
+                      setIsRolePopupOpen(false);
+                      handleRoleSelect('LEADERBOARD');
+                    }}
+                    className="w-full p-5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 rounded-2xl text-zinc-950 font-bold transition-all flex items-center gap-4 group text-left"
+                  >
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                      <ListOrdered className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black">Leaderboard</p>
+                      <p className="text-[10px] text-zinc-400 font-medium">Visualizza la classifica</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsRolePopupOpen(false);
+                      handleRoleSelect('ADMIN');
+                    }}
+                    className="w-full p-5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 rounded-2xl text-zinc-950 font-bold transition-all flex items-center gap-4 group text-left"
+                  >
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                      <Settings className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black">Crea Stanza</p>
+                      <p className="text-[10px] text-zinc-400 font-medium">Pannello di controllo</p>
+                    </div>
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -556,7 +625,21 @@ export default function App() {
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            {userRole === 'LEADERBOARD' && (
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">ID Stanza</label>
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  placeholder="Es. 12345678"
+                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-2">
+              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">Password</label>
               <input
                 type="password"
                 value={password}
@@ -592,17 +675,6 @@ export default function App() {
             </div>
           </form>
         </motion.div>
-      </div>
-    );
-  }
-
-  if (!gameState) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center text-zinc-500">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-          <p className="font-medium animate-pulse">Connessione al server...</p>
-        </div>
       </div>
     );
   }
@@ -677,22 +749,21 @@ export default function App() {
     );
   }
 
-  if (!gameState) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-zinc-500 font-bold animate-pulse">Connessione al server...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (isAdmin) {
-    return <AdminDashboard gameState={gameState} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
+    return <AdminDashboard gameState={gameState!} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
   }
 
   if (isLeaderboard) {
+    if (!gameState) {
+      return (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-zinc-500 font-bold animate-pulse">Connessione alla stanza...</p>
+          </div>
+        </div>
+      );
+    }
     return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
   }
 
@@ -718,19 +789,32 @@ export default function App() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-zinc-950 text-center mb-2">2001 Domande</h1>
-          <p className="text-zinc-600 text-center mb-8">Inserisci il nome della tua squadra per iniziare</p>
+          <p className="text-zinc-600 text-center mb-8">Inserisci l'ID della stanza e il nome della tua squadra</p>
           
           <form onSubmit={handleJoin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">Nome Squadra</label>
-              <input
-                type="text"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="Es. I Geni del Quiz"
-                className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
-                required
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">ID Stanza</label>
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  placeholder="Es. 12345678"
+                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">Nome Squadra</label>
+                <input
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="Es. I Geni del Quiz"
+                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  required
+                />
+              </div>
             </div>
             <button
               type="submit"
@@ -754,6 +838,17 @@ export default function App() {
             </div>
           )}
         </motion.div>
+      </div>
+    );
+  }
+
+  if (!gameState) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-zinc-500 font-bold animate-pulse">Sincronizzazione dati...</p>
+        </div>
       </div>
     );
   }
