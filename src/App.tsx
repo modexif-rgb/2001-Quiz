@@ -93,6 +93,156 @@ function TimerDisplay({ seconds, active, endTime, className }: { seconds: number
   );
 }
 
+const ManualEntryModal = ({ isOpen, onClose, onImport, currentPhase }: { isOpen: boolean, onClose: () => void, onImport: (questions: Question[]) => void, currentPhase: string }) => {
+  const [rows, setRows] = useState([{ text: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+
+  const addRow = () => {
+    setRows([...rows, { text: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+  };
+
+  const updateRow = (index: number, field: string, value: any) => {
+    const newRows = [...rows];
+    if (field.startsWith('option_')) {
+      const optIndex = parseInt(field.split('_')[1]);
+      newRows[index].options[optIndex] = value;
+    } else {
+      (newRows[index] as any)[field] = value;
+    }
+    setRows(newRows);
+  };
+
+  const removeRow = (index: number) => {
+    if (rows.length > 1) {
+      setRows(rows.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleImport = () => {
+    const validQuestions = rows
+      .filter(r => r.text.trim() !== '' && r.options.every(o => o.trim() !== ''))
+      .map((r, idx) => ({
+        id: `manual_${Date.now()}_${idx}`,
+        text: r.text,
+        options: r.options,
+        correctAnswer: r.correctAnswer,
+        difficulty: 'difficile' as const
+      }));
+
+    if (validQuestions.length > 0) {
+      onImport(validQuestions);
+      onClose();
+    } else {
+      alert("Inserisci almeno una domanda completa (testo e 4 opzioni).");
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+      >
+        <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
+          <div>
+            <h2 className="text-2xl font-black text-zinc-950">Inserimento Manuale Domande</h2>
+            <p className="text-zinc-500 text-sm">Aggiungi le domande riga per riga per la fase: <span className="font-bold text-emerald-600">{currentPhase}</span></p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-zinc-200 rounded-full transition-all">
+            <X className="w-6 h-6 text-zinc-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto p-6">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-left text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">
+                <th className="pb-4 pl-2">Domanda</th>
+                <th className="pb-4 px-2">Opzioni (A, B, C, D)</th>
+                <th className="pb-4 px-2 w-32 text-center">Risposta Corretta</th>
+                <th className="pb-4 pr-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-50">
+              {rows.map((row, idx) => (
+                <tr key={idx} className="group hover:bg-zinc-50/50 transition-all">
+                  <td className="py-4 pl-2 align-top">
+                    <textarea
+                      value={row.text}
+                      onChange={(e) => updateRow(idx, 'text', e.target.value)}
+                      placeholder="Testo della domanda..."
+                      className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none h-24"
+                    />
+                  </td>
+                  <td className="py-4 px-2 align-top">
+                    <div className="grid grid-cols-2 gap-2">
+                      {row.options.map((opt, optIdx) => (
+                        <input
+                          key={optIdx}
+                          type="text"
+                          value={opt}
+                          onChange={(e) => updateRow(idx, `option_${optIdx}`, e.target.value)}
+                          placeholder={`Opzione ${String.fromCharCode(65 + optIdx)}`}
+                          className="w-full bg-white border border-zinc-200 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                        />
+                      ))}
+                    </div>
+                  </td>
+                  <td className="py-4 px-2 align-top text-center">
+                    <select
+                      value={row.correctAnswer}
+                      onChange={(e) => updateRow(idx, 'correctAnswer', parseInt(e.target.value))}
+                      className="bg-white border border-zinc-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    >
+                      <option value={0}>Opzione A</option>
+                      <option value={1}>Opzione B</option>
+                      <option value={2}>Opzione C</option>
+                      <option value={3}>Opzione D</option>
+                    </select>
+                  </td>
+                  <td className="py-4 pr-2 align-top text-right">
+                    <button 
+                      onClick={() => removeRow(idx)}
+                      className="p-2 text-zinc-300 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <button 
+            onClick={addRow}
+            className="mt-6 w-full py-4 border-2 border-dashed border-zinc-200 rounded-2xl text-zinc-400 font-bold hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-50/50 transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Aggiungi un'altra riga
+          </button>
+        </div>
+
+        <div className="p-6 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-3">
+          <button 
+            onClick={onClose}
+            className="px-6 py-3 text-zinc-500 font-bold hover:text-zinc-700 transition-all"
+          >
+            Annulla
+          </button>
+          <button 
+            onClick={handleImport}
+            className="px-8 py-3 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
+          >
+            Importa {rows.length} Domande
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 // Synthetic Sound Generator removed from global scope
 
 export default function App() {
@@ -1255,6 +1405,7 @@ export default function App() {
 function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null }) {
   const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase);
   const [isUploading, setIsUploading] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({ 'default': true });
   const [isMusicUploading, setIsMusicUploading] = useState(false);
@@ -1319,7 +1470,12 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
           // Truncate text if it's excessively large to avoid context limits
           const truncatedText = fullText.length > 100000 ? fullText.substring(0, 100000) + "..." : fullText;
 
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+          const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+          if (!apiKey) {
+            throw new Error("An API Key must be set when running in a browser. Verifica la configurazione delle variabili d'ambiente.");
+          }
+
+          const ai = new GoogleGenAI({ apiKey });
           const response = await ai.models.generateContent({
             model: "gemini-3.1-flash-lite-preview",
             contents: `Analizza il seguente testo estratto da un PDF e convertilo in un array JSON di domande per un quiz.
@@ -1496,6 +1652,13 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                   <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" disabled={isUploading} />
                 </label>
               </div>
+              <button 
+                onClick={() => setShowManualEntry(true)}
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Aggiungi Manualmente
+              </button>
               {gameState.phase === 'LOBBY' && (
                 <button 
                   onClick={() => sendAction('START_GAME')}
@@ -1582,8 +1745,12 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 border-2 border-dashed border-zinc-200 rounded-2xl">
-              <p className="text-zinc-400 text-sm italic">Nessun PDF caricato. Usa il pulsante sopra per iniziare.</p>
+            <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-zinc-200 rounded-2xl bg-white/50">
+              <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-zinc-300" />
+              </div>
+              <p className="text-zinc-500 font-bold">Nessun file caricato</p>
+              <p className="text-xs text-zinc-400 mt-1">Carica un PDF o aggiungi domande manualmente per iniziare</p>
             </div>
           )}
         </section>
@@ -1980,6 +2147,16 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
           </div>
         </div>
       </div>
+
+      <ManualEntryModal 
+        isOpen={showManualEntry}
+        onClose={() => setShowManualEntry(false)}
+        onImport={(questions) => {
+          sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions, fileName: `Manuale_${new Date().toLocaleTimeString()}` });
+          alert(`Caricate ${questions.length} domande manualmente nella fase ${uploadPhase}!`);
+        }}
+        currentPhase={uploadPhase}
+      />
     </div>
   );
 }
