@@ -24,16 +24,21 @@ class PeerService {
     const generate8DigitId = () => Math.floor(10000000 + Math.random() * 90000000).toString();
     const id = generate8DigitId();
     
-    // Explicit configuration for PeerJS cloud server to ensure compatibility with HTTPS
+    // Simplified configuration for PeerJS cloud server
+    // PeerJS automatically handles secure connection when on HTTPS
     this.peer = new Peer(id, {
-      debug: 1,
-      secure: true,
-      host: '0.peerjs.com',
-      port: 443
+      debug: 2,
+      config: {
+        'iceServers': [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      }
     });
     
     this.peer.on('open', (id) => {
-      console.log('My peer ID is: ' + id);
+      console.log('PeerJS: Connected to server with ID:', id);
       this.onIdCallbacks.forEach(cb => cb(id));
     });
 
@@ -41,25 +46,33 @@ class PeerService {
       if (this.isHost) {
         this.handleNewConnection(conn);
       } else {
-        console.warn('Received connection but not in host mode');
+        console.warn('PeerJS: Received connection but not in host mode');
         conn.close();
       }
     });
 
     this.peer.on('error', (err: any) => {
-      console.error('Peer error:', err.type, err);
+      console.error('PeerJS Error:', err.type, err);
+      
       if (err.type === 'unavailable-id') {
-        console.log('ID taken, retrying with new ID...');
+        console.log('PeerJS: ID taken, retrying with new ID...');
         this.peer?.destroy();
-        this.initializePeer();
+        setTimeout(() => this.initializePeer(), 1000);
       } else if (err.type === 'peer-unavailable') {
-        // This happens if the host ID we are trying to connect to is wrong
-        this.callbacks.forEach(cb => cb({ type: 'CONNECTION_ERROR', error: 'Stanza non trovata. Verifica l\'ID.' }));
+        this.callbacks.forEach(cb => cb({ 
+          type: 'CONNECTION_ERROR', 
+          error: 'Stanza non trovata. Assicurati che l\'Admin abbia aperto la dashboard e che l\'ID sia corretto.' 
+        }));
+      } else if (err.type === 'network' || err.type === 'server-error') {
+        this.callbacks.forEach(cb => cb({ 
+          type: 'CONNECTION_ERROR', 
+          error: 'Errore di rete. Verifica la tua connessione internet.' 
+        }));
       }
     });
 
     this.peer.on('disconnected', () => {
-      console.log('Peer disconnected, reconnecting...');
+      console.log('PeerJS: Disconnected from server, attempting to reconnect...');
       this.peer?.reconnect();
     });
   }
@@ -563,45 +576,70 @@ class PeerService {
 
   // --- Client Logic ---
   connect(hostId: string) {
+    if (!hostId) return;
+    
     this.isHost = false;
     this.hostId = hostId;
     
     const performConnect = () => {
-      console.log('Attempting to connect to host:', hostId);
-      const conn = this.peer!.connect(hostId, {
-        reliable: true
+      if (!this.peer || this.peer.destroyed) {
+        this.initializePeer();
+        this.peer?.once('open', () => performConnect());
+        return;
+      }
+
+      console.log('PeerJS: Attempting to connect to host:', hostId);
+      
+      // Close existing connection if any
+      const existing = this.connections.get(hostId);
+      if (existing) existing.close();
+
+      const conn = this.peer.connect(hostId, {
+        reliable: true,
+        metadata: { timestamp: Date.now() }
       });
       
       conn.on('open', () => {
-        console.log('Connected to host:', hostId);
+        console.log('PeerJS: Connected to host:', hostId);
         this.connections.set(hostId, conn);
+        // Clear any previous connection errors
+        this.callbacks.forEach(cb => cb({ type: 'CONNECTION_SUCCESS' }));
       });
 
       conn.on('data', (data: any) => {
-        console.log('Client received data:', data);
         this.callbacks.forEach(cb => cb(data));
       });
 
       conn.on('close', () => {
-        console.log('Connection to host closed');
+        console.log('PeerJS: Connection to host closed');
         this.connections.delete(hostId);
-        // Try to reconnect if we still have a hostId
-        if (this.hostId === hostId) {
+        // Only auto-reconnect if we are still trying to be in this room
+        if (this.hostId === hostId && !this.isHost) {
+          console.log('PeerJS: Attempting auto-reconnect in 3s...');
           setTimeout(() => this.connect(hostId), 3000);
         }
       });
 
       conn.on('error', (err) => {
-        console.error('Connection error:', err);
-        this.callbacks.forEach(cb => cb({ type: 'CONNECTION_ERROR', error: 'Errore durante la connessione alla stanza.' }));
+        console.error('PeerJS Connection Error:', err);
+        // Don't trigger error immediately, let the peer-unavailable handler on the peer object handle it if it's a "not found"
       });
     };
 
     if (this.peer?.open) {
       performConnect();
     } else {
-      console.log('Peer not open yet, waiting...');
+      console.log('PeerJS: Peer not open yet, waiting for open event...');
       this.peer?.once('open', () => performConnect());
+      // If it takes too long to open the peer itself
+      setTimeout(() => {
+        if (!this.peer?.open) {
+          this.callbacks.forEach(cb => cb({ 
+            type: 'CONNECTION_ERROR', 
+            error: 'Impossibile inizializzare il servizio di rete. Prova a ricaricare la pagina.' 
+          }));
+        }
+      }, 8000);
     }
   }
 
