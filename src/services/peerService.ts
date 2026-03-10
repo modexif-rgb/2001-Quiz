@@ -13,6 +13,7 @@ class PeerService {
   private gameState: GameState | null = null;
   private timerInterval: any = null;
   private countdownInterval: any = null;
+  private messageQueue: any[] = [];
 
   private onIdCallbacks: Set<(id: string) => void> = new Set();
 
@@ -24,55 +25,56 @@ class PeerService {
     const generate8DigitId = () => Math.floor(10000000 + Math.random() * 90000000).toString();
     const id = generate8DigitId();
     
-    // Simplified configuration for PeerJS cloud server
-    // PeerJS automatically handles secure connection when on HTTPS
+    console.log('PeerJS: Initializing with ID:', id);
+    
     this.peer = new Peer(id, {
-      debug: 2,
+      debug: 3,
       config: {
         'iceServers': [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' }
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun.services.mozilla.com' }
         ]
       }
     });
     
     this.peer.on('open', (id) => {
-      console.log('PeerJS: Connected to server with ID:', id);
+      console.log('PeerJS: Server connection established. My ID:', id);
       this.onIdCallbacks.forEach(cb => cb(id));
     });
 
     this.peer.on('connection', (conn) => {
+      console.log('PeerJS: Incoming connection from:', conn.peer);
       if (this.isHost) {
         this.handleNewConnection(conn);
       } else {
-        console.warn('PeerJS: Received connection but not in host mode');
+        console.warn('PeerJS: Rejecting connection (not in host mode)');
         conn.close();
       }
     });
 
     this.peer.on('error', (err: any) => {
-      console.error('PeerJS Error:', err.type, err);
+      console.error('PeerJS Global Error:', err.type, err);
       
       if (err.type === 'unavailable-id') {
-        console.log('PeerJS: ID taken, retrying with new ID...');
         this.peer?.destroy();
         setTimeout(() => this.initializePeer(), 1000);
       } else if (err.type === 'peer-unavailable') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
-          error: 'Stanza non trovata. Assicurati che l\'Admin abbia aperto la dashboard e che l\'ID sia corretto.' 
+          error: 'Stanza non trovata. Verifica l\'ID e assicurati che l\'Admin sia online.' 
         }));
-      } else if (err.type === 'network' || err.type === 'server-error') {
+      } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
-          error: 'Errore di rete. Verifica la tua connessione internet.' 
+          error: 'Errore di rete o del server PeerJS. Riprova tra poco.' 
         }));
       }
     });
 
     this.peer.on('disconnected', () => {
-      console.log('PeerJS: Disconnected from server, attempting to reconnect...');
+      console.log('PeerJS: Disconnected from signaling server');
       this.peer?.reconnect();
     });
   }
@@ -85,28 +87,29 @@ class PeerService {
   startHost(initialState: GameState) {
     this.isHost = true;
     this.gameState = initialState;
-    console.log('Started as Host');
+    console.log('PeerJS: Started as Host');
   }
 
   private handleNewConnection(conn: DataConnection) {
     this.connections.set(conn.peer, conn);
     
     conn.on('data', (data: any) => {
-      console.log('Host received data:', data);
+      console.log('PeerJS Host: Received data from', conn.peer, data);
       this.handleHostMessage(conn, data);
     });
 
     conn.on('open', () => {
-      console.log('Connection opened with peer:', conn.peer);
-      // Send current state to new client
+      console.log('PeerJS Host: Connection opened with', conn.peer);
+      // Always send current state immediately on open
       if (this.gameState) {
+        console.log('PeerJS Host: Sending initial state to', conn.peer);
         conn.send({ type: 'STATE_UPDATE', state: this.gameState });
       }
     });
 
     conn.on('close', () => {
+      console.log('PeerJS Host: Connection closed by', conn.peer);
       this.connections.delete(conn.peer);
-      console.log('Connection closed with peer:', conn.peer);
     });
   }
 
@@ -114,6 +117,9 @@ class PeerService {
     if (!this.gameState) return;
 
     switch (data.type) {
+      case 'REQUEST_STATE':
+        conn.send({ type: 'STATE_UPDATE', state: this.gameState });
+        break;
       case 'JOIN_TEAM':
         const existingTeam = this.gameState.teams.find(t => t.name.toLowerCase() === data.name.toLowerCase());
         if (existingTeam) {
@@ -604,6 +610,10 @@ class PeerService {
         this.connections.set(hostId, conn);
         // Clear any previous connection errors
         this.callbacks.forEach(cb => cb({ type: 'CONNECTION_SUCCESS' }));
+        // Flush queue
+        this.flushMessageQueue();
+        // Request state explicitly just in case
+        conn.send({ type: 'REQUEST_STATE' });
       });
 
       conn.on('data', (data: any) => {
@@ -663,7 +673,21 @@ class PeerService {
       if (conn && conn.open) {
         conn.send(message);
       } else {
-        console.warn('Connection to host not open');
+        console.log('PeerJS: Connection not ready, queuing message:', message.type);
+        this.messageQueue.push(message);
+      }
+    }
+  }
+
+  private flushMessageQueue() {
+    if (this.hostId && this.messageQueue.length > 0) {
+      const conn = this.connections.get(this.hostId);
+      if (conn && conn.open) {
+        console.log('PeerJS: Flushing message queue, items:', this.messageQueue.length);
+        while (this.messageQueue.length > 0) {
+          const msg = this.messageQueue.shift();
+          conn.send(msg);
+        }
       }
     }
   }

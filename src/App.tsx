@@ -429,16 +429,14 @@ export default function App() {
       setConnectionError(null);
       peerService.connect(roomId.trim());
       
-      // Wait a bit for connection before sending join
-      const joinTimeout = setTimeout(() => {
-        peerService.send({ type: 'JOIN_TEAM', name: teamName });
-      }, 2000);
+      // Send join message immediately - it will be queued if connection is not ready
+      peerService.send({ type: 'JOIN_TEAM', name: teamName });
 
       // Safety timeout for connection
       setTimeout(() => {
         setIsConnecting(prev => {
           if (prev) {
-            setConnectionError("La connessione sta impiegando troppo tempo. Verifica l'ID Stanza.");
+            setConnectionError("La connessione sta impiegando troppo tempo. Verifica l'ID Stanza e assicurati che l'Admin sia online.");
             return false;
           }
           return false;
@@ -488,7 +486,19 @@ export default function App() {
         // Leaderboard can either host or connect
         // For simplicity, let's assume Admin hosts and Leaderboard connects
         if (roomId.trim()) {
+          setIsConnecting(true);
+          setConnectionError(null);
           peerService.connect(roomId.trim());
+          
+          setTimeout(() => {
+            setIsConnecting(prev => {
+              if (prev && !gameState) {
+                setConnectionError("La connessione della Leaderboard sta impiegando troppo tempo. Verifica l'ID.");
+                return false;
+              }
+              return false;
+            });
+          }, 10000);
         } else {
           const savedState = localStorage.getItem('gameState');
           const initialState = savedState ? JSON.parse(savedState) : createInitialState();
