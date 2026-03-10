@@ -1,5 +1,3 @@
-import { WebSocket } from 'ws';
-
 export type TeamStatus = 'in gara' | 'eliminata' | 'qualificata' | 'in semifinale' | 'in finale' | 'vincitrice';
 
 export interface Team {

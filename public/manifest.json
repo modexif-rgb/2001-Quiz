@@ -1,0 +1,21 @@
+{
+  "name": "Quiz Master Pro",
+  "short_name": "QuizMaster",
+  "description": "A real-time quiz platform for teams.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/quiz/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/quiz/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

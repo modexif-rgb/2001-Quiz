@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { socketService } from './services/socketService';
-import { GameState, Team } from './types';
+import { peerService } from './services/peerService';
+import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -107,6 +107,8 @@ export default function App() {
   const [view, setView] = useState<'SELECTION' | 'PASSWORD' | 'APP'>('SELECTION');
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState(false);
+  const [roomId, setRoomId] = useState('');
+  const [myPeerId, setMyPeerId] = useState<string | null>(null);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLeaderboard, setIsLeaderboard] = useState(false);
@@ -359,11 +361,12 @@ export default function App() {
   }, [gameState?.buzzes, audioEnabled, isLeaderboard]);
 
   useEffect(() => {
-    console.log('Connecting to socket...');
-    socketService.connect();
-    
-    const unsubscribe = socketService.subscribe((msg) => {
-      console.log('Received message from server:', msg.type);
+    const unsubscribeId = peerService.onId((id) => {
+      setMyPeerId(id);
+    });
+
+    const unsubscribe = peerService.subscribe((msg) => {
+      console.log('Received message from peer:', msg.type);
       if (msg.type === 'STATE_UPDATE' && msg.state) {
         setGameState(msg.state);
       }
@@ -374,38 +377,61 @@ export default function App() {
     });
 
     return () => {
-      console.log('Cleaning up socket subscription');
       unsubscribe();
+      unsubscribeId();
     };
   }, []);
 
-  // Separate effect to update myTeam when gameState changes
-  useEffect(() => {
-    if (gameState && myTeam) {
-      const updated = gameState.teams.find(t => t.id === myTeam.id);
-      if (updated) {
-        setMyTeam(updated);
-        localStorage.setItem('myTeam', JSON.stringify(updated));
-      }
-    }
-  }, [gameState]);
+  const createInitialState = (): GameState => ({
+    phase: 'LOBBY',
+    currentQuestionIndex: 0,
+    isQuestionActive: false,
+    isQuestionFinished: false,
+    teams: [],
+    selectedAnswers: {},
+    allTeamsAnswered: false,
+    usedQuestionIds: [],
+    buzzes: [],
+    timer: 60,
+    timerActive: false,
+    countdown: 0,
+    countdownActive: false,
+    showRoundWinner: false,
+    round: 1,
+    questionQueue: [],
+    uploadedFiles: [],
+    allQuestions: {
+      QUAL_1: [],
+      QUAL_2: [],
+      QUAL_3: [],
+      SEMIS: [],
+      FINAL: [],
+    },
+    leaderboardMusicUrl: '',
+    semisMatches: null,
+    finalMatch: null,
+  });
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (teamName.trim()) {
-      socketService.send({ type: 'JOIN_TEAM', name: teamName });
+    if (teamName.trim() && roomId.trim()) {
+      peerService.connect(roomId.trim());
+      // Wait a bit for connection before sending join
+      setTimeout(() => {
+        peerService.send({ type: 'JOIN_TEAM', name: teamName });
+      }, 1000);
     }
   };
 
   const handleBuzz = () => {
     if (myTeam) {
-      socketService.send({ type: 'BUZZ', teamId: myTeam.id });
+      peerService.send({ type: 'BUZZ', teamId: myTeam.id });
     }
   };
 
   const handleAnswer = (idx: number) => {
     if (myTeam && gameState?.isQuestionActive) {
-      socketService.send({ type: 'SUBMIT_ANSWER', teamId: myTeam.id, answerIndex: idx });
+      peerService.send({ type: 'SUBMIT_ANSWER', teamId: myTeam.id, answerIndex: idx });
     }
   };
 
@@ -426,9 +452,26 @@ export default function App() {
       if (userRole === 'ADMIN') {
         setIsAdmin(true);
         setIsLeaderboard(false);
+        // Start hosting if Admin
+        const savedState = localStorage.getItem('gameState');
+        const initialState = savedState ? JSON.parse(savedState) : createInitialState();
+        peerService.startHost(initialState);
+        setGameState(initialState);
+        setMyPeerId(peerService.getPeerId() || null);
       } else if (userRole === 'LEADERBOARD') {
         setIsAdmin(false);
         setIsLeaderboard(true);
+        // Leaderboard can either host or connect
+        // For simplicity, let's assume Admin hosts and Leaderboard connects
+        if (roomId.trim()) {
+          peerService.connect(roomId.trim());
+        } else {
+          const savedState = localStorage.getItem('gameState');
+          const initialState = savedState ? JSON.parse(savedState) : createInitialState();
+          peerService.startHost(initialState);
+          setGameState(initialState);
+          setMyPeerId(peerService.getPeerId() || null);
+        }
       }
       setView('APP');
       setPasswordError(false);
@@ -454,27 +497,45 @@ export default function App() {
           </div>
 
           <div className="grid gap-4">
-            <button
-              onClick={() => handleRoleSelect('TEAM')}
-              className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
-            >
-              <Users className="w-5 h-5 text-emerald-500" />
-              Accedi come Squadra
-            </button>
-            <button
-              onClick={() => handleRoleSelect('ADMIN')}
-              className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
-            >
-              <Settings className="w-5 h-5 text-emerald-500" />
-              Accedi come Admin
-            </button>
-            <button
-              onClick={() => handleRoleSelect('LEADERBOARD')}
-              className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
-            >
-              <ListOrdered className="w-5 h-5 text-emerald-500" />
-              Accedi come Leaderboard
-            </button>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">ID Stanza (necessario per Squadre e Leaderboard)</p>
+                <input
+                  type="text"
+                  placeholder="Inserisci ID Stanza..."
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                />
+              </div>
+              
+              <button
+                onClick={() => handleRoleSelect('TEAM')}
+                disabled={!roomId.trim()}
+                className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                <Users className="w-5 h-5 text-emerald-500" />
+                Accedi come Squadra
+              </button>
+              <button
+                onClick={() => handleRoleSelect('LEADERBOARD')}
+                className="w-full py-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-2xl text-zinc-950 font-bold transition-all flex items-center justify-center gap-3"
+              >
+                <ListOrdered className="w-5 h-5 text-emerald-500" />
+                Accedi come Leaderboard
+              </button>
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-200"></div></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-zinc-50 px-2 text-zinc-400 font-bold">Oppure crea una stanza</span></div>
+              </div>
+              <button
+                onClick={() => handleRoleSelect('ADMIN')}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
+              >
+                <Settings className="w-5 h-5" />
+                Crea Stanza (Admin)
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -628,11 +689,11 @@ export default function App() {
   }
 
   if (isAdmin) {
-    return <AdminDashboard gameState={gameState} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} />;
+    return <AdminDashboard gameState={gameState} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
   }
 
   if (isLeaderboard) {
-    return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} />;
+    return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
   }
 
   if (!myTeam) {
@@ -740,7 +801,7 @@ export default function App() {
               <button
                 onClick={() => {
                   if (myTeam) {
-                    socketService.send({ type: 'LEAVE_TEAM', teamId: myTeam.id });
+                    peerService.send({ type: 'LEAVE_TEAM', teamId: myTeam.id });
                     setMyTeam(null);
                     localStorage.removeItem('myTeam');
                   }
@@ -990,7 +1051,7 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void }) {
+function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null }) {
   const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1009,7 +1070,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
   }, [gameState.phase]);
 
   const sendAction = (action: string, payload: any = {}) => {
-    socketService.send({ type: 'ADMIN_ACTION', action, payload });
+    peerService.send({ type: 'ADMIN_ACTION', action, payload });
   };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1115,39 +1176,17 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
 
     setIsMusicUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('music', file);
-
-      const response = await fetch('/api/upload-music', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const contentType = response.headers.get("content-type");
-      if (!response.ok) {
-        let errorMessage = 'Upload failed';
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } else {
-          const text = await response.text();
-          console.error('Server returned non-JSON error:', text.substring(0, 200));
-          errorMessage = `Server error (${response.status}). Controlla la console per i dettagli.`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json();
-        console.log('Music uploaded successfully:', data.url);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        sendAction('SET_LEADERBOARD_MUSIC', { url: base64 });
         alert("Musica caricata con successo!");
         setIsMusicUploading(false);
-      } else {
-        throw new Error("Il server non ha risposto con un formato JSON valido.");
-      }
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error("Music upload error:", err);
-      alert("Errore durante il caricamento della musica. Assicurati che il file non sia troppo grande.");
+      alert("Errore durante il caricamento della musica.");
       setIsMusicUploading(false);
     }
   };
@@ -1198,7 +1237,21 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-black">Admin Dashboard</h1>
-              <p className="text-zinc-500 text-sm">Controllo totale della partita</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-zinc-500 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
+                {myPeerId && (
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(myPeerId);
+                      alert("ID Stanza copiato!");
+                    }}
+                    className="p-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-400 hover:text-emerald-500"
+                    title="Copia ID"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
@@ -1399,8 +1452,8 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                     <p className="text-lg font-black text-emerald-500">{gameState.round}</p>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: gameState.round + 1 })} className="p-1 text-zinc-400 hover:text-emerald-500"><ArrowUp className="w-3 h-3" /></button>
-                    <button onClick={() => socketService.send({ type: 'SET_ROUND', round: Math.max(1, gameState.round - 1) })} className="p-1 text-zinc-400 hover:text-emerald-500"><ArrowDown className="w-3 h-3" /></button>
+                    <button onClick={() => peerService.send({ type: 'SET_ROUND', round: gameState.round + 1 })} className="p-1 text-zinc-400 hover:text-emerald-500"><ArrowUp className="w-3 h-3" /></button>
+                    <button onClick={() => peerService.send({ type: 'SET_ROUND', round: Math.max(1, gameState.round - 1) })} className="p-1 text-zinc-400 hover:text-emerald-500"><ArrowDown className="w-3 h-3" /></button>
                   </div>
                 </div>
                 <div className="bg-white p-4 rounded-2xl border border-zinc-200">
@@ -1409,7 +1462,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack }: { gameState: 
                     <p className="text-lg font-black text-emerald-500">{gameState.currentQuestionIndex}/10</p>
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => socketService.send({ type: 'PREVIOUS_QUESTION' })}
+                        onClick={() => peerService.send({ type: 'PREVIOUS_QUESTION' })}
                         disabled={gameState.currentQuestionIndex <= 1}
                         className="p-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 hover:text-emerald-500 disabled:opacity-20"
                       >
@@ -1734,7 +1787,7 @@ function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onSco
   );
 }
 
-function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void }) {
+function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null }) {
   const sortedTeams = [...gameState.teams].sort((a, b) => b.score - a.score);
 
   const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
@@ -1925,8 +1978,14 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack }: { 
           <div className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 hidden sm:block" /> {/* Spacer */}
         </div>
         
-        <div className="space-y-2">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950">Classifica Real-Time</h1>
+        <div className="space-y-4">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 uppercase">Classifica Real-Time</h1>
+          {myPeerId && (
+            <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-xl mx-auto w-fit">
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Stanza:</p>
+              <p className="text-xs font-black text-emerald-500">{myPeerId}</p>
+            </div>
+          )}
           <div className="flex flex-col items-center gap-1">
             <p className="text-emerald-500 text-sm sm:text-lg font-black uppercase tracking-[0.3em]">Round {gameState.round} | {roundType}</p>
             <p className="text-zinc-400 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}/10</p>
