@@ -122,7 +122,19 @@ class PeerService {
         console.log('PeerJS Host: Sending initial state to', conn.peer);
         // Strip library for new connections too
         const { allQuestions, ...strippedState } = this.gameState;
+        
+        // Also strip large music data from initial state, send it separately
+        const musicUrl = strippedState.leaderboardMusicUrl;
+        if (musicUrl && musicUrl.startsWith('data:')) {
+          strippedState.leaderboardMusicUrl = 'DATA_URL_SYNCED';
+        }
+        
         conn.send({ type: 'STATE_UPDATE', state: strippedState });
+
+        // If there's a large music URL, send it once separately
+        if (musicUrl && musicUrl.startsWith('data:')) {
+          conn.send({ type: 'MUSIC_UPDATE', url: musicUrl });
+        }
       }
     });
 
@@ -199,6 +211,13 @@ class PeerService {
         
       case 'SET_LEADERBOARD_MUSIC':
         this.gameState.leaderboardMusicUrl = data.payload.url;
+        this.broadcast({ type: 'MUSIC_UPDATE', url: data.payload.url });
+        this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
+        break;
+
+      case 'DELETE_LEADERBOARD_MUSIC':
+        this.gameState.leaderboardMusicUrl = '';
+        this.broadcast({ type: 'MUSIC_UPDATE', url: '' });
         this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
         break;
 
@@ -559,6 +578,7 @@ class PeerService {
         if (this.gameState.timer <= 0) {
           this.stopTimer();
           this.gameState.isQuestionActive = false;
+          this.gameState.isQuestionFinished = true;
           this.calculateScores();
           if (this.gameState.currentQuestionIndex === 10 && this.gameState.phase.startsWith('QUAL_')) {
             const winner = [...this.gameState.teams].sort((a, b) => b.score - a.score)[0];
@@ -642,6 +662,13 @@ class PeerService {
     let clientData = data;
     if (data.type === 'STATE_UPDATE' && data.state) {
       const { allQuestions, ...strippedState } = data.state;
+      
+      // CRITICAL: Strip large music data URLs from frequent state updates
+      // These can be several megabytes and will crash the DataChannel if sent 10x per second
+      if (strippedState.leaderboardMusicUrl && strippedState.leaderboardMusicUrl.startsWith('data:')) {
+        strippedState.leaderboardMusicUrl = 'DATA_URL_SYNCED';
+      }
+      
       clientData = { ...data, state: strippedState };
     }
 

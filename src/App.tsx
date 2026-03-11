@@ -263,6 +263,8 @@ export default function App() {
   const [isRolePopupOpen, setIsRolePopupOpen] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [pendingAnswer, setPendingAnswer] = useState<number | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLeaderboard, setIsLeaderboard] = useState(false);
@@ -522,9 +524,19 @@ export default function App() {
     const unsubscribe = peerService.subscribe((msg) => {
       console.log('Received message from peer:', msg.type);
       if (msg.type === 'STATE_UPDATE' && msg.state) {
-        setGameState(msg.state);
+        setGameState(prev => {
+          const newState = { ...msg.state };
+          // Preserve music URL if the incoming state has the placeholder
+          if (newState.leaderboardMusicUrl === 'DATA_URL_SYNCED' && prev?.leaderboardMusicUrl) {
+            newState.leaderboardMusicUrl = prev.leaderboardMusicUrl;
+          }
+          return newState;
+        });
         setIsConnecting(false);
         setConnectionError(null);
+      }
+      if (msg.type === 'MUSIC_UPDATE') {
+        setGameState(prev => prev ? { ...prev, leaderboardMusicUrl: msg.url } : null);
       }
       if (msg.type === 'JOIN_SUCCESS' && msg.team) {
         setMyTeam(msg.team);
@@ -609,8 +621,17 @@ export default function App() {
   };
 
   const handleAnswer = (idx: number) => {
-    if (myTeam && gameState?.isQuestionActive) {
-      peerService.send({ type: 'SUBMIT_ANSWER', teamId: myTeam.id, answerIndex: idx });
+    if (myTeam && gameState?.isQuestionActive && gameState.selectedAnswers[myTeam.id] === undefined) {
+      setPendingAnswer(idx);
+      setShowConfirmation(true);
+    }
+  };
+
+  const confirmAnswer = () => {
+    if (myTeam && pendingAnswer !== null) {
+      peerService.send({ type: 'SUBMIT_ANSWER', teamId: myTeam.id, answerIndex: pendingAnswer });
+      setPendingAnswer(null);
+      setShowConfirmation(false);
     }
   };
 
@@ -1118,6 +1139,46 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-white text-zinc-950 flex flex-col">
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <h3 className="text-2xl font-black text-zinc-950">Confermi la risposta?</h3>
+                <p className="text-zinc-500">Hai scelto la risposta <span className="font-bold text-emerald-500">{String.fromCharCode(65 + (pendingAnswer ?? 0))}</span></p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={confirmAnswer}
+                  className="w-full py-4 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all"
+                >
+                  Sì, conferma
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmation(false);
+                    setPendingAnswer(null);
+                  }}
+                  className="w-full py-4 bg-zinc-100 text-zinc-500 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
+                >
+                  No, cambia
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="p-4 sm:p-6 border-b border-zinc-200 flex flex-wrap justify-between items-center gap-4 bg-white/50 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -1134,7 +1195,9 @@ export default function App() {
           <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
           <div className="text-right">
             <p className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5 sm:mb-1">Punti</p>
-            <p className="text-lg sm:text-xl font-black text-emerald-500">{myTeam.score}</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-500">
+              {gameState.teams.find(t => t.id === myTeam.id)?.score ?? 0}
+            </p>
           </div>
         </div>
       </header>
@@ -1198,51 +1261,88 @@ export default function App() {
               <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 text-center shadow-2xl space-y-8">
                 {gameState.isQuestionActive && gameState.currentQuestion ? (
                   <>
-                    <p className="text-2xl font-bold text-zinc-950">{gameState.currentQuestion.text}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {gameState.currentQuestion.options?.map((option, idx) => (
-                        <button
-                          key={idx}
-                          disabled={!gameState.isQuestionActive || gameState.selectedAnswers[myTeam.id] !== undefined}
-                          onClick={() => handleAnswer(idx)}
-                          className={cn(
-                            "bg-white border rounded-2xl p-6 text-left transition-all flex items-center gap-4 group relative overflow-hidden",
-                            gameState.selectedAnswers[myTeam.id] === idx 
-                              ? "border-emerald-500 bg-emerald-500/10" 
-                              : gameState.selectedAnswers[myTeam.id] !== undefined
-                                ? "border-zinc-200 opacity-50 cursor-not-allowed"
-                                : "border-zinc-200 hover:bg-zinc-100 active:scale-95"
-                          )}
-                        >
-                          {gameState.selectedAnswers[myTeam.id] === idx && (
-                            <motion.div 
-                              initial={{ x: '-100%' }}
-                              animate={{ x: '100%' }}
-                              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent"
-                            />
-                          )}
-                          <div className={cn(
-                            "w-10 h-10 rounded-xl border flex items-center justify-center font-black transition-colors relative z-10",
-                            gameState.selectedAnswers[myTeam.id] === idx
-                              ? "bg-emerald-500 text-zinc-950 border-emerald-400"
-                              : "bg-zinc-50 border-zinc-200 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-zinc-950"
-                          )}>
-                            {String.fromCharCode(65 + idx)}
-                          </div>
-                          <span className={cn(
-                            "font-bold transition-colors relative z-10",
-                            gameState.selectedAnswers[myTeam.id] === idx ? "text-zinc-950" : "text-zinc-700 group-hover:text-zinc-950"
-                          )}>{option}</span>
-                          {gameState.selectedAnswers[myTeam.id] === idx && (
-                            <CheckCircle2 className="w-6 h-6 text-emerald-500 ml-auto relative z-10" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                    {gameState.selectedAnswers[myTeam.id] !== undefined ? (
+                      <div className="py-12 flex flex-col items-center gap-6">
+                        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                        </div>
+                        <p className="text-3xl font-black text-emerald-500 uppercase tracking-[0.2em]">Risposta Inviata</p>
+                        <p className="text-zinc-500 font-medium">In attesa delle altre squadre...</p>
+
+                        {gameState.isQuestionFinished && gameState.currentQuestion && (
+                           <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-6 bg-zinc-950 text-white rounded-3xl w-full mt-8 shadow-xl"
+                           >
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                              <p className="text-2xl font-black">
+                                {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                              </p>
+                           </motion.div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-zinc-950">{gameState.currentQuestion.text}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {gameState.currentQuestion.options?.map((option, idx) => (
+                            <button
+                              key={idx}
+                              disabled={!gameState.isQuestionActive || gameState.selectedAnswers[myTeam.id] !== undefined}
+                              onClick={() => handleAnswer(idx)}
+                              className={cn(
+                                "bg-white border rounded-2xl p-6 text-left transition-all flex items-center gap-4 group relative overflow-hidden",
+                                gameState.selectedAnswers[myTeam.id] === idx 
+                                  ? "border-emerald-500 bg-emerald-500/10" 
+                                  : gameState.selectedAnswers[myTeam.id] !== undefined
+                                    ? "border-zinc-200 opacity-50 cursor-not-allowed"
+                                    : "border-zinc-200 hover:bg-zinc-100 active:scale-95"
+                              )}
+                            >
+                              {gameState.selectedAnswers[myTeam.id] === idx && (
+                                <motion.div 
+                                  initial={{ x: '-100%' }}
+                                  animate={{ x: '100%' }}
+                                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent"
+                                />
+                              )}
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl border flex items-center justify-center font-black transition-colors relative z-10",
+                                gameState.selectedAnswers[myTeam.id] === idx
+                                  ? "bg-emerald-500 text-zinc-950 border-emerald-400"
+                                  : "bg-zinc-50 border-zinc-200 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-zinc-950"
+                              )}>
+                                {String.fromCharCode(65 + idx)}
+                              </div>
+                              <span className={cn(
+                                "font-bold transition-colors relative z-10",
+                                gameState.selectedAnswers[myTeam.id] === idx ? "text-zinc-950" : "text-zinc-700 group-hover:text-zinc-950"
+                              )}>{option}</span>
+                              {gameState.selectedAnswers[myTeam.id] === idx && (
+                                <CheckCircle2 className="w-6 h-6 text-emerald-500 ml-auto relative z-10" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </>
                 ) : (
                   <div className="py-12 flex flex-col items-center gap-6">
+                    {gameState.isQuestionFinished && gameState.currentQuestion && (
+                       <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="p-6 bg-zinc-950 text-white rounded-3xl w-full mb-6 shadow-xl"
+                       >
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                          <p className="text-2xl font-black">
+                            {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                          </p>
+                       </motion.div>
+                    )}
                     <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center animate-pulse">
                       <Zap className="w-8 h-8 text-zinc-400" />
                     </div>
@@ -2196,9 +2296,6 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
               animate={{ y: 0, opacity: 1 }}
               className="text-center space-y-8"
             >
-              <h2 className="text-4xl sm:text-6xl font-black text-zinc-300 uppercase tracking-[0.3em]">
-                {gameState.countdownType === 'QUESTION_ENDING' ? 'Fine Domanda' : 'Prossima Domanda'}
-              </h2>
               <motion.div 
                 key={gameState.countdown}
                 initial={{ scale: 0.5, opacity: 0 }}
@@ -2210,6 +2307,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
               >
                 <CountdownDisplay seconds={gameState.countdown} active={gameState.countdownActive} endTime={gameState.countdownEndTime} />
               </motion.div>
+              <h2 className="text-4xl sm:text-6xl font-black text-zinc-300 uppercase tracking-[0.3em]">
+                {gameState.countdownType === 'QUESTION_ENDING' ? 'Fine Domanda' : 'Prossima Domanda'}
+              </h2>
               <p className="text-xl sm:text-2xl font-bold text-zinc-400 uppercase tracking-widest animate-pulse">
                 {gameState.countdownType === 'QUESTION_ENDING' ? 'Tempo quasi scaduto!' : 'Preparatevi...'}
               </p>
@@ -2255,7 +2355,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
       
       {/* Current Question Display during timer */}
       <AnimatePresence>
-        {gameState.timerActive && gameState.currentQuestion && (
+        {(gameState.timerActive || gameState.isQuestionFinished) && gameState.currentQuestion && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2268,13 +2368,29 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
               </div>
               <div className="relative z-10 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="px-4 py-1.5 bg-emerald-500 text-zinc-950 text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
-                    Domanda in corso
+                  <div className={cn(
+                    "px-4 py-1.5 text-zinc-950 text-[10px] font-black uppercase tracking-[0.2em] rounded-full",
+                    gameState.isQuestionFinished ? "bg-amber-500" : "bg-emerald-500"
+                  )}>
+                    {gameState.isQuestionFinished ? "Risultato Domanda" : "Domanda in corso"}
                   </div>
                 </div>
                 <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 leading-tight">
                   {gameState.currentQuestion.text}
                 </h3>
+
+                {gameState.isQuestionFinished && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-8 p-6 bg-zinc-950 text-white rounded-3xl"
+                  >
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                    <p className="text-3xl sm:text-5xl font-black">
+                      {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                    </p>
+                  </motion.div>
+                )}
               </div>
             </div>
           </motion.div>
