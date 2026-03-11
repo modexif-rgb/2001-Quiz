@@ -1,6 +1,7 @@
 import { Peer, DataConnection } from 'peerjs';
 import { v4 as uuidv4 } from 'uuid';
 import { GameState, Team, Question } from '../types';
+import { PRELOADED_QUESTIONS } from '../data/questions';
 
 type MessageCallback = (data: any) => void;
 
@@ -119,7 +120,9 @@ class PeerService {
       // Always send current state immediately on open
       if (this.gameState) {
         console.log('PeerJS Host: Sending initial state to', conn.peer);
-        conn.send({ type: 'STATE_UPDATE', state: this.gameState });
+        // Strip library for new connections too
+        const { allQuestions, ...strippedState } = this.gameState;
+        conn.send({ type: 'STATE_UPDATE', state: strippedState });
       }
     });
 
@@ -134,7 +137,8 @@ class PeerService {
 
     switch (data.type) {
       case 'REQUEST_STATE':
-        conn.send({ type: 'STATE_UPDATE', state: this.gameState });
+        const { allQuestions, ...strippedState } = this.gameState;
+        conn.send({ type: 'STATE_UPDATE', state: strippedState });
         break;
       case 'JOIN_TEAM':
         const existingTeam = this.gameState.teams.find(t => t.name.toLowerCase() === data.name.toLowerCase());
@@ -189,7 +193,7 @@ class PeerService {
         break;
 
       case 'REORDER_QUEUE':
-        this.gameState.questionQueue = data.payload.queue;
+        this.gameState.questionQueue = [...data.payload.queue];
         this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
         break;
         
@@ -325,27 +329,62 @@ class PeerService {
       case 'RESET_GAME':
         this.stopTimer();
         this.stopCountdown();
-        // Reset state logic would go here
+        this.gameState.phase = 'LOBBY';
+        this.gameState.currentQuestionIndex = 0;
+        this.gameState.isQuestionActive = false;
+        this.gameState.isQuestionFinished = false;
+        this.gameState.teams.forEach(t => { t.score = 0; t.status = 'in gara'; });
+        this.gameState.selectedAnswers = {};
+        this.gameState.allTeamsAnswered = false;
+        this.gameState.buzzes = [];
+        this.gameState.questionQueue = [];
+        this.gameState.usedQuestionIds = [];
+        this.gameState.showRoundWinner = false;
+        this.gameState.round = 1;
         break;
       case 'DELETE_TEAM':
         this.gameState.teams = this.gameState.teams.filter(t => t.id !== payload.teamId);
         break;
       case 'ADD_TO_QUEUE':
-        if (!this.gameState.questionQueue.includes(payload.questionId)) {
-          this.gameState.questionQueue.push(payload.questionId);
+        // The payload might contain 'question' or 'questionId'
+        const qId = payload.questionId || payload.question?.id;
+        if (!this.gameState.questionQueue) this.gameState.questionQueue = [];
+        if (qId && !this.gameState.questionQueue.includes(qId)) {
+          this.gameState.questionQueue = [...this.gameState.questionQueue, qId];
         }
         break;
       case 'REMOVE_FROM_QUEUE':
-        this.gameState.questionQueue = this.gameState.questionQueue.filter(id => id !== payload.questionId);
+        const rId = payload.questionId || payload.question?.id;
+        if (this.gameState.questionQueue) {
+          this.gameState.questionQueue = this.gameState.questionQueue.filter(id => id !== rId);
+        }
+        break;
+      case 'REMOVE_FILE':
+      case 'DELETE_FILE':
+        const { fileName } = payload;
+        this.gameState.uploadedFiles = this.gameState.uploadedFiles.filter(f => f !== fileName);
+        
+        const newAllQuestions = { ...this.gameState.allQuestions };
+        Object.keys(newAllQuestions).forEach(phase => {
+          newAllQuestions[phase] = newAllQuestions[phase].filter(q => q.source !== fileName);
+        });
+        this.gameState.allQuestions = newAllQuestions;
+        break;
+      case 'CLEAR_ALL_QUESTIONS':
+        this.gameState.uploadedFiles = [];
+        Object.keys(this.gameState.allQuestions).forEach(phase => {
+          this.gameState!.allQuestions[phase] = [];
+        });
+        this.gameState.questionQueue = [];
         break;
       case 'ADD_QUESTIONS':
-        const { phase, questions, fileName } = payload;
-        if (fileName && !this.gameState.uploadedFiles.includes(fileName)) {
-          this.gameState.uploadedFiles.push(fileName);
+        const { phase: targetPhase, questions: newQuestions, fileName: sourceFile } = payload;
+        if (sourceFile && !this.gameState.uploadedFiles.includes(sourceFile)) {
+          this.gameState.uploadedFiles.push(sourceFile);
         }
-        if (!this.gameState.allQuestions[phase]) this.gameState.allQuestions[phase] = [];
-        const questionsWithSource = questions.map((q: any) => ({ ...q, source: fileName || 'default' }));
-        this.gameState.allQuestions[phase].push(...questionsWithSource);
+        if (!this.gameState.allQuestions[targetPhase]) this.gameState.allQuestions[targetPhase] = [];
+        const questionsWithSource = newQuestions.map((q: any) => ({ ...q, source: sourceFile || 'default' }));
+        this.gameState.allQuestions[targetPhase].push(...questionsWithSource);
         break;
       case 'CLEAR_BUZZES':
         this.gameState.buzzes = [];
@@ -358,41 +397,57 @@ class PeerService {
 
   private updateCurrentQuestion(manualId?: string) {
     if (!this.gameState) return;
-    const phaseQuestions = this.gameState.allQuestions[this.gameState.phase as keyof typeof this.gameState.allQuestions];
-    if (phaseQuestions) {
-      if (manualId) {
-        const manual = phaseQuestions.find(q => q.id === manualId);
-        if (manual) {
-          this.gameState.currentQuestion = manual;
-          if (!this.gameState.usedQuestionIds.includes(manual.id)) {
-            this.gameState.usedQuestionIds.push(manual.id);
-          }
-          return;
-        }
-      }
+    
+    // Combine all available questions (Preloaded + Library in state)
+    const allAvailableQuestions = [
+      ...PRELOADED_QUESTIONS.flatMap(f => f.questions),
+      ...Object.values(this.gameState.allQuestions).flat()
+    ];
 
-      if (this.gameState.questionQueue.length > 0) {
-        const nextId = this.gameState.questionQueue.shift();
-        const allQuestionsFlat = Object.values(this.gameState.allQuestions).flat();
-        const queued = allQuestionsFlat.find(q => q.id === nextId);
-        if (queued) {
-          this.gameState.currentQuestion = queued;
-          if (!this.gameState.usedQuestionIds.includes(queued.id)) {
-            this.gameState.usedQuestionIds.push(queued.id);
-          }
-          return;
-        }
-      }
+    const phase = this.gameState.phase;
+    const phaseQuestions = allAvailableQuestions.filter(q => {
+      // If it's a preloaded question, we might need to check if it's intended for this phase
+      // For now, if it's in the queue or manualId, we use it.
+      // Otherwise, we filter by phase if the question has a phase property (which it doesn't yet)
+      // So we'll rely on the queue or manual selection mostly.
+      return true; 
+    });
 
-      let available = phaseQuestions.filter(q => !this.gameState!.usedQuestionIds.includes(q.id));
-      if (available.length > 0) {
-        const randomIndex = Math.floor(Math.random() * available.length);
-        const selectedQuestion = available[randomIndex];
-        this.gameState.currentQuestion = selectedQuestion;
-        this.gameState.usedQuestionIds.push(selectedQuestion.id);
-      } else {
-        this.gameState.currentQuestion = phaseQuestions[0];
+    if (manualId) {
+      const manual = allAvailableQuestions.find(q => q.id === manualId);
+      if (manual) {
+        this.gameState.currentQuestion = manual;
+        if (!this.gameState.usedQuestionIds.includes(manual.id)) {
+          this.gameState.usedQuestionIds.push(manual.id);
+        }
+        return;
       }
+    }
+
+    if (this.gameState.questionQueue.length > 0) {
+      const nextId = this.gameState.questionQueue.shift();
+      const queued = allAvailableQuestions.find(q => q.id === nextId);
+      if (queued) {
+        this.gameState.currentQuestion = queued;
+        if (!this.gameState.usedQuestionIds.includes(queued.id)) {
+          this.gameState.usedQuestionIds.push(queued.id);
+        }
+        return;
+      }
+    }
+
+    // Fallback: random from phase-appropriate questions
+    // Since we don't have phase-mapping for preloaded yet, we'll just pick from what's in the state for that phase
+    const statePhaseQuestions = this.gameState.allQuestions[phase as keyof typeof this.gameState.allQuestions] || [];
+    let available = statePhaseQuestions.filter(q => !this.gameState!.usedQuestionIds.includes(q.id));
+    
+    if (available.length > 0) {
+      const randomIndex = Math.floor(Math.random() * available.length);
+      const selectedQuestion = available[randomIndex];
+      this.gameState.currentQuestion = selectedQuestion;
+      this.gameState.usedQuestionIds.push(selectedQuestion.id);
+    } else if (statePhaseQuestions.length > 0) {
+      this.gameState.currentQuestion = statePhaseQuestions[0];
     }
   }
 
@@ -581,16 +636,33 @@ class PeerService {
 
   private broadcast(data: any) {
     if (!this.isHost) return;
-    const message = data;
+    
+    // Create a stripped version of the state for non-admin peers
+    // to reduce payload size and lag.
+    let clientData = data;
+    if (data.type === 'STATE_UPDATE' && data.state) {
+      const { allQuestions, ...strippedState } = data.state;
+      clientData = { ...data, state: strippedState };
+    }
+
     this.connections.forEach(conn => {
       if (conn.open) {
-        conn.send(message);
+        // We could potentially send full state to some peers and stripped to others,
+        // but for now, everyone except the host gets the stripped version.
+        // The host (Admin) already has the full state in this.gameState.
+        conn.send(clientData);
       }
     });
-    // Trigger local callbacks for the host itself
-    this.callbacks.forEach(cb => cb(data));
+
+    // Trigger local callbacks for the host itself (Admin)
+    // We send a shallow clone of the state to ensure React triggers a re-render
+    if (data.type === 'STATE_UPDATE' && data.state) {
+      this.callbacks.forEach(cb => cb({ ...data, state: { ...data.state } }));
+    } else {
+      this.callbacks.forEach(cb => cb(data));
+    }
     
-    // Persist state
+    // Persist state (FULL state)
     if (this.gameState) {
       localStorage.setItem('gameState', JSON.stringify(this.gameState));
     }

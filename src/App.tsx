@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { peerService } from './services/peerService';
 import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { PRELOADED_QUESTIONS } from './data/questions';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -560,13 +561,19 @@ export default function App() {
     round: 1,
     questionQueue: [],
     uploadedFiles: [],
-    allQuestions: {
+    allQuestions: PRELOADED_QUESTIONS.reduce((acc, folder) => {
+      // Map preloaded folders to phases or just a general pool
+      // For now, let's put them in a 'LIBRARY' phase or similar if needed
+      // But the app expects QUAL_1, QUAL_2, etc.
+      // We'll initialize them as empty and let the admin pick
+      return acc;
+    }, {
       QUAL_1: [],
       QUAL_2: [],
       QUAL_3: [],
       SEMIS: [],
       FINAL: [],
-    },
+    }),
     leaderboardMusicUrl: '',
     semisMatches: null,
     finalMatch: null,
@@ -1403,152 +1410,28 @@ export default function App() {
 }
 
 function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null }) {
-  const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase === 'LOBBY' ? 'QUAL_1' : gameState.phase);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({ 'default': true });
+  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = { 'default': true };
+    PRELOADED_QUESTIONS.forEach(f => { initial[f.name] = f.name === 'Cultura Generale - Facile'; });
+    return initial;
+  });
   const [isMusicUploading, setIsMusicUploading] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const testAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Update uploadPhase when gameState.phase changes, but only if it's not LOBBY
-  useEffect(() => {
-    if (gameState.phase !== 'LOBBY') {
-      setUploadPhase(gameState.phase);
-    } else if (uploadPhase === 'LOBBY') {
-      setUploadPhase('QUAL_1');
+  // Memoize sendAction to avoid re-renders and lag
+  const sendAction = useCallback((action: string, payload: any = {}) => {
+    // Some actions are top-level, others are ADMIN_ACTION
+    const topLevelActions = ['SET_LEADERBOARD_MUSIC', 'SET_ROUND', 'REORDER_QUEUE'];
+    if (topLevelActions.includes(action)) {
+      peerService.send({ type: action as any, payload });
+    } else {
+      peerService.send({ type: 'ADMIN_ACTION', action, payload });
     }
-  }, [gameState.phase]);
-
-  const sendAction = (action: string, payload: any = {}) => {
-    peerService.send({ type: 'ADMIN_ACTION', action, payload });
-  };
-
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    const fileName = file.name;
-    try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const typedarray = new Uint8Array(event.target?.result as ArrayBuffer);
-        
-        console.log("PDF.js processing, version:", pdfjs.version);
-        
-        let pdf;
-        try {
-          pdf = await pdfjs.getDocument({
-            data: typedarray,
-            useWorkerFetch: false,
-            isEvalSupported: false,
-            disableFontFace: true 
-          }).promise;
-        } catch (err: any) {
-          console.error("PDF loading failed:", err);
-          alert(`Errore nel caricamento del PDF: ${err.message || 'Errore sconosciuto'}. Prova con un file più semplice.`);
-          return;
-        }
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
-        }
-
-        if (!fullText.trim()) {
-          alert("Il PDF sembra essere vuoto o non contiene testo estraibile (potrebbe essere un'immagine). Prova con un PDF testuale.");
-          setIsUploading(false);
-          return;
-        }
-
-        console.log("Extracted text from PDF, length:", fullText.length, "characters. Sending to Gemini...");
-        
-        try {
-          // Truncate text if it's excessively large to avoid context limits
-          const truncatedText = fullText.length > 100000 ? fullText.substring(0, 100000) + "..." : fullText;
-
-          const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-          if (!apiKey) {
-            throw new Error("An API Key must be set when running in a browser. Verifica la configurazione delle variabili d'ambiente.");
-          }
-
-          const ai = new GoogleGenAI({ apiKey });
-          const response = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite-preview",
-            contents: `Analizza il seguente testo estratto da un PDF e convertilo in un array JSON di domande per un quiz.
-            
-            REGOLE DI FORMATTAZIONE:
-            1. Restituisci SOLO l'array JSON.
-            2. Ogni oggetto deve avere:
-               - "text": la domanda pulita (senza numeri o prefissi)
-               - "options": array di esattamente 4 stringhe
-               - "correctAnswer": numero intero (0-3) che indica la posizione della risposta corretta nell'array options
-               - "difficulty": stringa, usa "difficile" per impostazione predefinita
-            3. Se il testo è confuso, cerca di estrarre le informazioni più sensate.
-            4. Se trovi molte domande, estrai solo le più significative per evitare timeout.
-            
-            TESTO DA ANALIZZARE:
-            ${truncatedText}`,
-            config: {
-              systemInstruction: "Sei un assistente esperto nella creazione di quiz. Il tuo compito è estrarre domande e risposte da testi grezzi e formattarli rigorosamente in JSON secondo lo schema richiesto. Sii preciso nell'individuare la risposta corretta.",
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    text: { type: Type.STRING },
-                    options: { 
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING }
-                    },
-                    correctAnswer: { type: Type.INTEGER },
-                    difficulty: { type: Type.STRING }
-                  },
-                  required: ["text", "options", "correctAnswer", "difficulty"]
-                }
-              }
-            }
-          });
-
-          const responseText = response.text;
-          if (!responseText) throw new Error("Risposta vuota dall'IA");
-
-          const questions = JSON.parse(responseText).map((q: any, idx: number) => ({
-            ...q,
-            id: `uploaded_${Date.now()}_${idx}`
-          }));
-
-          if (questions.length > 0) {
-            sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions, fileName });
-            alert(`Caricate ${questions.length} domande da ${fileName} nella fase ${uploadPhase}!`);
-            setExpandedSources(prev => ({ ...prev, [fileName]: true }));
-          } else {
-            alert("Non ho trovato domande nel formato previsto.");
-          }
-        } catch (aiErr: any) {
-          console.error("Gemini Parsing Error:", aiErr);
-          const errorMsg = aiErr.message || "Errore sconosciuto";
-          if (errorMsg.includes("SAFETY")) {
-            alert("Il contenuto del PDF è stato bloccato dai filtri di sicurezza dell'IA.");
-          } else if (errorMsg.includes("QUOTA")) {
-            alert("Limite di richieste raggiunto. Riprova tra un minuto.");
-          } else {
-            alert(`Errore durante l'analisi delle domande: ${errorMsg}. Prova a caricare un file più piccolo o controlla la connessione.`);
-          }
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (error) {
-      console.error("PDF Error:", error);
-      alert("Errore durante il caricamento del PDF.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  }, []);
 
   const handleMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1572,20 +1455,43 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
   };
 
   const availableQuestions = gameState.allQuestions[gameState.phase] || [];
-  
-  // Group ALL questions from ALL phases by source
-  const allQuestionsFlat = Object.values(gameState.allQuestions).flat();
-  const questionsBySource = allQuestionsFlat.reduce((acc, q) => {
-    const source = q.source || 'default';
-    if (!acc[source]) acc[source] = [];
-    // Avoid duplicates in the library view
-    if (!acc[source].some(existing => existing.id === q.id)) {
-      if (q.text.toLowerCase().includes(searchQuery.toLowerCase())) {
-        acc[source].push(q);
+  const allQuestionsFlat = useMemo(() => {
+    const stateQuestions = Object.values(gameState.allQuestions).flat();
+    const preloadedQuestions = PRELOADED_QUESTIONS.flatMap(f => f.questions);
+    // Combine both, ensuring no duplicates by ID
+    const combined = [...preloadedQuestions];
+    stateQuestions.forEach(q => {
+      if (!combined.some(existing => existing.id === q.id)) {
+        combined.push(q);
       }
-    }
+    });
+    return combined;
+  }, [gameState]);
+  
+  // Group ALL questions from ALL sources (Preloaded + Uploaded + Manual)
+  const questionsBySource = useMemo(() => {
+    const acc: Record<string, Question[]> = {};
+    
+    // 1. Add Preloaded Questions
+    PRELOADED_QUESTIONS.forEach(folder => {
+      acc[folder.name] = folder.questions.filter(q => 
+        q.text.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    });
+
+    // 2. Add Questions from State (Uploaded/Manual)
+    allQuestionsFlat.forEach(q => {
+      const source = q.source || 'Manuale';
+      if (!acc[source]) acc[source] = [];
+      if (!acc[source].some(existing => existing.id === q.id)) {
+        if (q.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+          acc[source].push(q);
+        }
+      }
+    });
+
     return acc;
-  }, {} as Record<string, typeof availableQuestions>);
+  }, [allQuestionsFlat, searchQuery]);
 
   const toggleSource = (source: string) => {
     setExpandedSources(prev => ({ ...prev, [source]: !prev[source] }));
@@ -1603,8 +1509,8 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
   return (
     <div className="min-h-screen bg-white text-zinc-950 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
-        <header className="flex flex-col sm:flex-row justify-between items-center gap-6 text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+        <header className="flex flex-col lg:flex-row justify-between items-center gap-6 text-center lg:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
             <button
               onClick={onBack}
               className="p-3 bg-zinc-100 border border-zinc-200 rounded-2xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-200 transition-all"
@@ -1642,34 +1548,31 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               </div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full lg:w-auto">
             <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-              <div className="relative group">
-                <label className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
-                  <FileText className="w-4 h-4" />
-                  {isUploading ? 'Caricamento...' : 'Carica PDF'}
-                  <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" disabled={isUploading} />
-                </label>
-              </div>
               <button 
                 onClick={() => setShowManualEntry(true)}
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm"
+                className="flex-1 sm:flex-none px-6 py-3 bg-emerald-500 text-zinc-950 rounded-2xl font-black hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Aggiungi Manualmente
+                Aggiungi Domande
               </button>
               {gameState.phase === 'LOBBY' && (
                 <button 
                   onClick={() => sendAction('START_GAME')}
-                  className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-emerald-500 text-zinc-950 rounded-2xl font-black hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                  className="flex-1 sm:flex-none px-6 py-3 bg-zinc-950 text-white rounded-2xl font-black hover:bg-zinc-800 transition-all text-sm"
                 >
                   Inizia Partita
                 </button>
               )}
               <button 
-                onClick={() => sendAction('RESET_GAME')}
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:bg-red-500/20 transition-all text-sm"
+                onClick={() => {
+                  if (confirm("Sei sicuro di voler resettare l'intera partita? Tutti i punteggi verranno azzerati.")) {
+                    sendAction('RESET_GAME');
+                  }
+                }}
+                className="flex-1 sm:flex-none px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:bg-red-500/20 transition-all text-sm"
               >
                 Reset
               </button>
@@ -1677,20 +1580,33 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
           </div>
         </header>
 
-        {/* PDF Management Section - Now more prominent and closer to upload */}
-        <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4">
+        {/* Question Library Section */}
+        <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                File PDF Caricati
-              </h3>
-              <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-1 w-fit">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase">Destinazione:</span>
+              <h2 className="text-lg font-black text-zinc-950 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-emerald-500" />
+                Libreria Domande
+              </h2>
+              <p className="text-xs text-zinc-500">Seleziona le domande dai PDF caricati o dalle cartelle predefinite</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-1.5 shadow-sm">
+                <Search className="w-3 h-3 text-zinc-400" />
+                <input 
+                  type="text" 
+                  placeholder="Cerca domanda..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="text-xs bg-transparent outline-none w-32 sm:w-48"
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-1.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase">Destinazione:</span>
                 <select 
                   value={uploadPhase}
                   onChange={(e) => setUploadPhase(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-emerald-500 focus:outline-none cursor-pointer"
+                  className="text-xs font-bold text-emerald-600 bg-transparent outline-none cursor-pointer"
                 >
                   <option value="QUAL_1">Qualificazioni 1</option>
                   <option value="QUAL_2">Qualificazioni 2</option>
@@ -1700,59 +1616,85 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                 </select>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {gameState.uploadedFiles.length > 0 && (
-                <button 
-                  onClick={() => {
-                    // Using a simple state-less confirm or just direct action to avoid iframe issues
-                    // But for "Clear All", we really want a confirmation. 
-                    // I'll use a simple double-click pattern or just a prompt.
-                    const val = prompt('Scrivi "ELIMINA" per svuotare tutto il database:');
-                    if (val === 'ELIMINA') {
-                      sendAction('CLEAR_ALL_QUESTIONS');
-                    }
-                  }}
-                  className="text-[10px] font-bold text-red-500 hover:text-red-400 uppercase tracking-widest px-3 py-1 bg-red-500/10 rounded-lg border border-red-500/20 transition-all"
-                >
-                  Svuota Tutto
-                </button>
-              )}
-              <span className="text-[10px] font-bold text-zinc-600 bg-white px-2 py-1 rounded-lg border border-zinc-200">
-                {gameState.uploadedFiles.length} FILE
-              </span>
-            </div>
           </div>
-          
-          {gameState.uploadedFiles.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {gameState.uploadedFiles.map(file => (
-                <div key={file} className="flex items-center justify-between gap-3 bg-white border border-zinc-200 px-4 py-3 rounded-2xl group hover:border-zinc-300 transition-all">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
-                    <span className="text-sm text-zinc-700 truncate font-medium">{file}</span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(questionsBySource).map(([source, questions]) => {
+              const qs = questions as Question[];
+              return (
+                <div key={source} className="bg-white border border-zinc-200 rounded-2xl overflow-hidden group hover:border-emerald-500/50 transition-all shadow-sm">
+                  <div className="p-4 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/50">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center shrink-0">
+                        <Folder className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-zinc-900 truncate">{source}</p>
+                        <p className="text-[10px] text-zinc-400 font-medium">{qs.length} domande</p>
+                      </div>
+                    </div>
+                    {!PRELOADED_QUESTIONS.some(f => f.name === source) && (
+                      <button 
+                        onClick={() => sendAction('REMOVE_FILE', { fileName: source })}
+                        className="p-2 text-zinc-300 hover:text-red-500 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  <button 
-                    onClick={() => {
-                      // Removed confirm() to avoid iframe blocking issues
-                      sendAction('DELETE_FILE', { fileName: file });
-                    }}
-                    className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all shrink-0"
-                    title="Elimina file"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="p-2">
+                    <button 
+                      onClick={() => toggleSource(source)}
+                      className="w-full py-2 px-3 text-[10px] font-bold text-zinc-500 hover:text-emerald-600 flex items-center justify-between rounded-lg hover:bg-emerald-50 transition-all"
+                    >
+                      {expandedSources[source] ? 'Nascondi domande' : 'Mostra domande'}
+                      <ChevronRight className={cn("w-3 h-3 transition-transform", expandedSources[source] && "rotate-90")} />
+                    </button>
+                    <AnimatePresence>
+                      {expandedSources[source] && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+                            {qs.map(q => (
+                              <div key={q.id} className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-zinc-50 group/item">
+                                <p className="text-[10px] text-zinc-600 truncate flex-1">{q.text}</p>
+                                <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                  <button 
+                                    onClick={() => sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions: [q], fileName: source })}
+                                    className="p-1.5 bg-zinc-100 text-zinc-400 hover:bg-emerald-500 hover:text-white rounded-md transition-all"
+                                    title={`Aggiungi a ${uploadPhase}`}
+                                  >
+                                    <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                  <button 
+                                    onClick={() => sendAction('ADD_TO_QUEUE', { question: q })}
+                                    disabled={gameState.questionQueue.some(item => item === q.id)}
+                                    className={cn(
+                                      "p-1.5 rounded-md transition-all",
+                                      gameState.questionQueue.some(item => item === q.id)
+                                        ? "bg-emerald-50 text-emerald-500"
+                                        : "bg-zinc-100 text-zinc-400 hover:bg-amber-500 hover:text-white"
+                                    )}
+                                    title="Metti in coda"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-zinc-200 rounded-2xl bg-white/50">
-              <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-zinc-300" />
-              </div>
-              <p className="text-zinc-500 font-bold">Nessun file caricato</p>
-              <p className="text-xs text-zinc-400 mt-1">Carica un PDF o aggiungi domande manualmente per iniziare</p>
-            </div>
-          )}
+              );
+            })}
+          </div>
         </section>
 
         {/* Music Management Section */}
@@ -1942,98 +1884,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                 </div>
               </div>
 
-              {/* Next Question Selector (Grouped by Source) */}
-              <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Libreria Domande</p>
-                </div>
-                
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input 
-                    type="text" 
-                    placeholder="Cerca tra le domande..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                  />
-                </div>
-
-                <div className="max-h-96 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                  {Object.entries(questionsBySource).map(([source, questions]) => (
-                    <div key={source} className="space-y-2">
-                      <button 
-                        onClick={() => toggleSource(source)}
-                        className="w-full flex items-center justify-between p-3 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          {expandedSources[source] ? <FolderOpen className="w-4 h-4 text-emerald-500" /> : <Folder className="w-4 h-4 text-zinc-400" />}
-                          <span className="text-sm font-bold text-zinc-700 truncate max-w-[250px]">{source}</span>
-                          <span className="text-[10px] bg-zinc-200 text-zinc-500 px-2 py-0.5 rounded-full">{questions.length}</span>
-                        </div>
-                        <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", expandedSources[source] && "rotate-90")} />
-                      </button>
-
-                      {expandedSources[source] && (
-                        <div className="space-y-2 ml-4">
-                          {questions.map((q) => (
-                            <div
-                              key={q.id}
-                              className={cn(
-                                "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-4",
-                                gameState.questionQueue.includes(q.id) 
-                                  ? "bg-emerald-500/5 border-emerald-500/30" 
-                                  : "bg-white border-zinc-200"
-                              )}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className={cn("text-sm font-medium", gameState.questionQueue.includes(q.id) ? "text-emerald-600" : "text-zinc-700")}>
-                                    {q.text}
-                                  </p>
-                                  {/* Find which phase this question belongs to */}
-                                  {Object.entries(gameState.allQuestions).map(([phase, qs]) => 
-                                    qs.some(item => item.id === q.id) ? (
-                                      <span key={phase} className="text-[8px] bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200 uppercase font-black">
-                                        {phase}
-                                      </span>
-                                    ) : null
-                                  )}
-                                </div>
-                                {q.options && (
-                                  <p className="text-[10px] text-zinc-400 truncate">
-                                    {q.options.join(' • ')}
-                                  </p>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => {
-                                  if (gameState.questionQueue.includes(q.id)) {
-                                    sendAction('REMOVE_FROM_QUEUE', { questionId: q.id });
-                                  } else {
-                                    sendAction('ADD_TO_QUEUE', { questionId: q.id });
-                                  }
-                                }}
-                                className={cn(
-                                  "p-2 rounded-lg transition-all",
-                                  gameState.questionQueue.includes(q.id)
-                                    ? "bg-emerald-500 text-zinc-950"
-                                    : "bg-zinc-100 text-zinc-400 hover:bg-emerald-500 hover:text-zinc-950"
-                                )}
-                              >
-                                {gameState.questionQueue.includes(q.id) ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {Object.keys(questionsBySource).length === 0 && (
-                    <p className="text-center text-zinc-400 text-sm py-4 italic">Nessuna domanda trovata</p>
-                  )}
-                </div>
-              </div>
+              {/* Next Question Selector (Grouped by Source) - REMOVED DUPLICATE */}
 
               <div className="flex flex-wrap gap-4 pt-4 items-center">
                 {gameState.phase.startsWith('QUAL_') && gameState.phase !== 'QUAL_RESULTS' && (
