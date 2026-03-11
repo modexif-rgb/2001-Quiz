@@ -29,8 +29,8 @@ class PeerService {
     console.log('PeerJS: Initializing with ID:', id);
     
     this.peer = new Peer(id, {
-      debug: 3,
-      secure: window.location.protocol === 'https:',
+      debug: 2, // Reduced for production but still helpful
+      secure: true, // Force secure for Netlify/HTTPS
       config: {
         'iceServers': [
           { urls: 'stun:stun.l.google.com:19302' },
@@ -39,9 +39,12 @@ class PeerService {
           { urls: 'stun:stun3.l.google.com:19302' },
           { urls: 'stun:stun4.l.google.com:19302' },
           { urls: 'stun:stun.services.mozilla.com' },
-          { urls: 'stun:stun.stunprotocol.org' }
+          { urls: 'stun:stun.stunprotocol.org' },
+          { urls: 'stun:stun.voiparound.com' },
+          { urls: 'stun:stun.voipbuster.com' },
+          { urls: 'stun:stun.voipstunt.com' },
+          { urls: 'stun:stun.voxgratia.org' }
         ],
-        'sdpSemantics': 'unified-plan',
         'iceCandidatePoolSize': 10
       }
     });
@@ -75,7 +78,12 @@ class PeerService {
       } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
-          error: 'Errore di rete o del server PeerJS. Riprova tra poco.' 
+          error: 'Errore di rete o del server PeerJS. Se sei su rete mobile, prova a passare al Wi-Fi.' 
+        }));
+      } else if (err.type === 'webrtc') {
+        this.callbacks.forEach(cb => cb({ 
+          type: 'CONNECTION_ERROR', 
+          error: 'Il tuo browser o la tua rete bloccano la connessione WebRTC.' 
         }));
       }
     });
@@ -717,10 +725,24 @@ class PeerService {
 
       const conn = this.peer.connect(hostId, {
         reliable: true,
-        metadata: { timestamp: Date.now() }
+        metadata: { timestamp: Date.now() },
+        serialization: 'json'
       });
       
+      // Connection timeout
+      const timeout = setTimeout(() => {
+        if (!this.connections.has(hostId)) {
+          console.warn('PeerJS: Connection attempt timed out');
+          conn.close();
+          this.callbacks.forEach(cb => cb({ 
+            type: 'CONNECTION_ERROR', 
+            error: 'Tempo scaduto. L\'Admin potrebbe avere una rete che blocca le connessioni entranti.' 
+          }));
+        }
+      }, 15000);
+
       conn.on('open', () => {
+        clearTimeout(timeout);
         console.log('PeerJS: Connected to host:', hostId);
         this.connections.set(hostId, conn);
         // Clear any previous connection errors

@@ -605,12 +605,12 @@ export default function App() {
       setTimeout(() => {
         setIsConnecting(prev => {
           if (prev) {
-            setConnectionError("La connessione sta impiegando troppo tempo. Verifica l'ID Stanza e assicurati che l'Admin sia online.");
+            setConnectionError("La connessione sta impiegando troppo tempo. Assicurati che l'Admin abbia già effettuato l'accesso e che la tua rete non blocchi WebRTC.");
             return false;
           }
           return false;
         });
-      }, 10000);
+      }, 20000);
     }
   };
 
@@ -671,12 +671,12 @@ export default function App() {
           setTimeout(() => {
             setIsConnecting(prev => {
               if (prev && !gameState) {
-                setConnectionError("La connessione della Leaderboard sta impiegando troppo tempo. Verifica l'ID.");
+                setConnectionError("La connessione della Leaderboard sta impiegando troppo tempo. Assicurati che l'Admin sia online e che l'ID sia corretto.");
                 return false;
               }
               return false;
             });
-          }, 10000);
+          }, 20000);
         } else {
           const savedState = localStorage.getItem('gameState');
           const initialState = savedState ? JSON.parse(savedState) : createInitialState();
@@ -745,10 +745,13 @@ export default function App() {
               <div className="space-y-1 relative z-10">
                 <span className="text-2xl tracking-tight block">ACCEDI COME SQUADRA</span>
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-950/60 font-bold uppercase tracking-[0.2em]">
-                  <span className="w-1 h-1 bg-zinc-950 rounded-full animate-pulse" />
-                  <span>Inizia la sfida</span>
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  <span>Stanza: {myPeerId || '...'}</span>
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                 </div>
+                <p className="text-[9px] text-zinc-400 font-medium mt-2">
+                  L'Admin deve entrare per primo per permettere agli altri di connettersi.
+                </p>
               </div>
             </motion.button>
           </div>
@@ -977,7 +980,17 @@ export default function App() {
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold text-zinc-950">Errore di Connessione</h3>
                     <p className="text-zinc-500 text-sm">{connectionError}</p>
-                    <p className="text-[10px] text-zinc-400 italic mt-2">Consiglio: Le reti mobili spesso bloccano queste connessioni. Usa il Wi-Fi se possibile.</p>
+                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-2 mt-4">
+                      <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider flex items-center gap-2">
+                        <Zap className="w-3 h-3" />
+                        Consigli per la connessione:
+                      </p>
+                      <ul className="text-[10px] text-amber-700 space-y-1 list-disc pl-4">
+                        <li>Assicurati che l'Admin abbia già effettuato l'accesso alla Dashboard.</li>
+                        <li>Se sei su rete mobile (4G/5G), prova a passare al Wi-Fi.</li>
+                        <li>Verifica che l'ID Stanza sia esattamente lo stesso mostrato dall'Admin.</li>
+                      </ul>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <button
@@ -1626,6 +1639,10 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               <div className="flex flex-col gap-1 mt-1">
                 <div className="flex items-center gap-2">
                   <p className="text-zinc-500 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
+                  <div className={cn(
+                    "w-2 h-2 rounded-full animate-pulse",
+                    myPeerId ? "bg-emerald-500" : "bg-zinc-300"
+                  )} title={myPeerId ? "Connesso al server" : "Connessione..."} />
                   {myPeerId && (
                     <button 
                       onClick={() => {
