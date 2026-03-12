@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { peerService } from './services/peerService';
 import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -144,12 +144,12 @@ const ManualEntryModal = ({ isOpen, onClose, onImport, currentPhase }: { isOpen:
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800"
       >
-        <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
+        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900">
           <div>
-            <h2 className="text-2xl font-black text-zinc-950">Inserimento Manuale Domande</h2>
-            <p className="text-zinc-500 text-sm">Aggiungi le domande riga per riga per la fase: <span className="font-bold text-emerald-600">{currentPhase}</span></p>
+            <h2 className="text-2xl font-black text-zinc-950 dark:text-white">Inserimento Manuale Domande</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm">Aggiungi le domande riga per riga per la fase: <span className="font-bold text-emerald-600 dark:text-emerald-500">{currentPhase}</span></p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-zinc-200 rounded-full transition-all">
             <X className="w-6 h-6 text-zinc-400" />
@@ -159,22 +159,22 @@ const ManualEntryModal = ({ isOpen, onClose, onImport, currentPhase }: { isOpen:
         <div className="flex-1 overflow-auto p-6">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="text-left text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">
+              <tr className="text-left text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
                 <th className="pb-4 pl-2">Domanda</th>
                 <th className="pb-4 px-2">Opzioni (A, B, C, D)</th>
                 <th className="pb-4 px-2 w-32 text-center">Risposta Corretta</th>
                 <th className="pb-4 pr-2 w-10"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-50">
+            <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
               {rows.map((row, idx) => (
-                <tr key={idx} className="group hover:bg-zinc-50/50 transition-all">
+                <tr key={idx} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-all">
                   <td className="py-4 pl-2 align-top">
                     <textarea
                       value={row.text}
                       onChange={(e) => updateRow(idx, 'text', e.target.value)}
                       placeholder="Testo della domanda..."
-                      className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none h-24"
+                      className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-sm text-zinc-950 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none h-24"
                     />
                   </td>
                   <td className="py-4 px-2 align-top">
@@ -225,10 +225,10 @@ const ManualEntryModal = ({ isOpen, onClose, onImport, currentPhase }: { isOpen:
           </button>
         </div>
 
-        <div className="p-6 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-3">
+        <div className="p-6 bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
           <button 
             onClick={onClose}
-            className="px-6 py-3 text-zinc-500 font-bold hover:text-zinc-700 transition-all"
+            className="px-6 py-3 text-zinc-500 dark:text-zinc-400 font-bold hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
           >
             Annulla
           </button>
@@ -246,8 +246,41 @@ const ManualEntryModal = ({ isOpen, onClose, onImport, currentPhase }: { isOpen:
 
 // Synthetic Sound Generator removed from global scope
 
+const ThemeToggle = ({ theme, toggleTheme }: { theme: 'light' | 'dark', toggleTheme: () => void }) => (
+  <button
+    onClick={toggleTheme}
+    className="p-2.5 rounded-xl transition-all bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 border border-zinc-200 dark:border-zinc-700 shadow-sm"
+    title={theme === 'light' ? "Passa a Modalità Scura" : "Passa a Modalità Chiara"}
+  >
+    {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+  </button>
+);
+
 export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    console.log('Theme changed to:', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    console.log('Toggling theme...');
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
   const [myTeam, setMyTeam] = useState<Team | null>(null);
   const [savedTeam, setSavedTeam] = useState<Team | null>(() => {
     const saved = localStorage.getItem('myTeam');
@@ -488,7 +521,7 @@ export default function App() {
 
   // Handle Countdown SFX
   useEffect(() => {
-    if (!audioEnabled || !gameState || !isLeaderboard) return;
+    if (!audioEnabled || !gameState) return;
 
     // SFX: "3,2,1 prima delle domande"
     if (gameState.countdownActive && gameState.countdown > 0) {
@@ -504,7 +537,7 @@ export default function App() {
 
     prevCountdownValue.current = gameState.countdown;
     prevCountdownActive.current = gameState.countdownActive;
-  }, [gameState?.countdown, gameState?.countdownActive, audioEnabled, isLeaderboard]);
+  }, [gameState?.countdown, gameState?.countdownActive, audioEnabled]);
 
   // Handle Buzz SFX
   useEffect(() => {
@@ -532,6 +565,10 @@ export default function App() {
           }
           return newState;
         });
+        setIsConnecting(false);
+        setConnectionError(null);
+      }
+      if (msg.type === 'CONNECTION_SUCCESS') {
         setIsConnecting(false);
         setConnectionError(null);
       }
@@ -650,11 +687,12 @@ export default function App() {
     e.preventDefault();
     if (password === '12345678') {
       if (userRole === 'ADMIN') {
+        peerService.forceNewId();
         setIsAdmin(true);
         setIsLeaderboard(false);
-        // Start hosting if Admin
-        const savedState = localStorage.getItem('gameState');
-        const initialState = savedState ? JSON.parse(savedState) : createInitialState();
+        // Start hosting if Admin - always start from zero when creating a new room
+        localStorage.removeItem('gameState');
+        const initialState = createInitialState();
         peerService.startHost(initialState);
         setGameState(initialState);
         setMyPeerId(peerService.getPeerId() || null);
@@ -694,7 +732,11 @@ export default function App() {
 
   if (view === 'SELECTION') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-500">
+        {/* Theme Toggle in Selection Screen */}
+        <div className="fixed top-6 right-6 z-50">
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+        </div>
         {/* Background Decorative Elements */}
         <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[100px]" />
@@ -702,7 +744,7 @@ export default function App() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-white border border-zinc-100 rounded-[3rem] p-10 shadow-[0_30px_100px_rgba(0,0,0,0.08)] space-y-12 relative z-10"
+          className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[3rem] p-10 shadow-[0_30px_100px_rgba(0,0,0,0.08)] space-y-12 relative z-10"
         >
           <div className="text-center space-y-2">
             <motion.button 
@@ -712,18 +754,18 @@ export default function App() {
               className="w-24 h-24 bg-emerald-500/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 cursor-pointer hover:bg-emerald-500/20 transition-all group relative"
             >
               <Trophy className="w-10 h-10 text-emerald-500 group-hover:scale-110 transition-transform" />
-              <div className="absolute -bottom-1 -right-1 bg-white border border-zinc-100 p-2 rounded-xl shadow-sm">
+              <div className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 p-2 rounded-xl shadow-sm">
                 <Settings className="w-3.5 h-3.5 text-zinc-400" />
               </div>
             </motion.button>
             <div className="space-y-1">
-              <h1 className="text-4xl font-black text-zinc-950 tracking-tight">
+              <h1 className="text-4xl font-black text-zinc-950 dark:text-white tracking-tight">
                 Benvenuto <span className="text-emerald-500">al Quiz</span>
               </h1>
               <div className="flex items-center justify-center gap-3">
-                <div className="h-[1px] w-12 bg-zinc-200" />
-                <p className="text-zinc-500 font-black uppercase tracking-[0.4em] text-sm">2001 Domande</p>
-                <div className="h-[1px] w-12 bg-zinc-200" />
+                <div className="h-[1px] w-12 bg-zinc-200 dark:bg-zinc-800" />
+                <p className="text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-[0.4em] text-sm">2001 Domande</p>
+                <div className="h-[1px] w-12 bg-zinc-200 dark:bg-zinc-800" />
               </div>
             </div>
           </div>
@@ -745,13 +787,10 @@ export default function App() {
               <div className="space-y-1 relative z-10">
                 <span className="text-2xl tracking-tight block">ACCEDI COME SQUADRA</span>
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-950/60 font-bold uppercase tracking-[0.2em]">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                  <span>Stanza: {myPeerId || '...'}</span>
+                  <span className="w-1 h-1 bg-zinc-950 rounded-full animate-pulse" />
+                  <span>Inizia la sfida</span>
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                 </div>
-                <p className="text-[9px] text-zinc-400 font-medium mt-2">
-                  L'Admin deve entrare per primo per permettere agli altri di connettersi.
-                </p>
               </div>
             </motion.button>
           </div>
@@ -772,13 +811,13 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl relative z-10 space-y-6"
+                className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 shadow-2xl relative z-10 space-y-6"
               >
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-black text-zinc-950 uppercase tracking-tight">Opzioni Avanzate</h2>
+                  <h2 className="text-xl font-black text-zinc-950 dark:text-white uppercase tracking-tight">Opzioni Avanzate</h2>
                   <button 
                     onClick={() => setIsRolePopupOpen(false)}
-                    className="p-2 hover:bg-zinc-100 rounded-xl transition-colors"
+                    className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
                   >
                     <X className="w-5 h-5 text-zinc-400" />
                   </button>
@@ -790,9 +829,9 @@ export default function App() {
                       setIsRolePopupOpen(false);
                       handleRoleSelect('LEADERBOARD');
                     }}
-                    className="w-full p-5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 rounded-2xl text-zinc-950 font-bold transition-all flex items-center gap-4 group text-left"
+                    className="w-full p-5 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-2xl text-zinc-950 dark:text-white font-bold transition-all flex items-center gap-4 group text-left"
                   >
-                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                       <ListOrdered className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
@@ -806,9 +845,9 @@ export default function App() {
                       setIsRolePopupOpen(false);
                       handleRoleSelect('ADMIN');
                     }}
-                    className="w-full p-5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 rounded-2xl text-zinc-950 font-bold transition-all flex items-center gap-4 group text-left"
+                    className="w-full p-5 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-2xl text-zinc-950 dark:text-white font-bold transition-all flex items-center gap-4 group text-left"
                   >
-                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                       <Settings className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
@@ -827,41 +866,44 @@ export default function App() {
 
   if (view === 'PASSWORD') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 transition-colors duration-500">
+        <div className="fixed top-6 right-6 z-50">
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+        </div>
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-50 border border-zinc-200 rounded-3xl p-8 shadow-2xl space-y-6"
+          className="w-full max-w-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-6"
         >
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-zinc-950">Accesso Riservato</h1>
-            <p className="text-zinc-600">Inserisci la password per {userRole}</p>
+            <h1 className="text-2xl font-bold text-zinc-950 dark:text-white">Accesso Riservato</h1>
+            <p className="text-zinc-600 dark:text-zinc-400">Inserisci la password per {userRole}</p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             {userRole === 'LEADERBOARD' && (
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">ID Stanza</label>
+                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider ml-1">ID Stanza</label>
                 <input
                   type="text"
                   value={roomId}
                   onChange={(e) => setRoomId(e.target.value)}
                   placeholder="Es. 12345678"
-                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-5 py-4 text-zinc-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                   required
                 />
               </div>
             )}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">Password</label>
+              <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider ml-1">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className={cn(
-                  "w-full bg-white border rounded-2xl px-5 py-4 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
-                  passwordError ? "border-red-500" : "border-zinc-200"
+                  "w-full bg-white dark:bg-zinc-800 border rounded-2xl px-5 py-4 text-zinc-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
+                  passwordError ? "border-red-500" : "border-zinc-200 dark:border-zinc-700"
                 )}
                 autoFocus
               />
@@ -876,7 +918,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setView('SELECTION')}
-                className="flex-1 py-4 bg-zinc-100 text-zinc-500 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
+                className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 font-bold rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
               >
                 Indietro
               </button>
@@ -895,7 +937,7 @@ export default function App() {
 
   if (!audioEnabled && isLeaderboard) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 transition-colors duration-500">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -964,28 +1006,31 @@ export default function App() {
   }
 
   if (isAdmin) {
-    return <AdminDashboard gameState={gameState!} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
+    return <AdminDashboard gameState={gameState!} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} theme={theme} toggleTheme={toggleTheme} />;
   }
 
     if (isLeaderboard) {
       if (!gameState) {
         return (
-          <div className="min-h-screen bg-white flex items-center justify-center p-6">
+          <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 transition-colors duration-500">
+            <div className="fixed top-6 right-6 z-50">
+              <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+            </div>
             <div className="text-center space-y-6 max-w-xs">
               {connectionError ? (
                 <>
-                  <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto">
+                  <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto">
                     <AlertCircle className="w-8 h-8 text-red-500" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-zinc-950">Errore di Connessione</h3>
-                    <p className="text-zinc-500 text-sm">{connectionError}</p>
-                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-2 mt-4">
-                      <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-zinc-950 dark:text-white">Errore di Connessione</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm">{connectionError}</p>
+                    <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-2xl space-y-2 mt-4 text-left">
+                      <p className="text-[10px] text-amber-800 dark:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-2">
                         <Zap className="w-3 h-3" />
                         Consigli per la connessione:
                       </p>
-                      <ul className="text-[10px] text-amber-700 space-y-1 list-disc pl-4">
+                      <ul className="text-[10px] text-amber-700 dark:text-amber-500/80 space-y-1 list-disc pl-4">
                         <li>Assicurati che l'Admin abbia già effettuato l'accesso alla Dashboard.</li>
                         <li>Se sei su rete mobile (4G/5G), prova a passare al Wi-Fi.</li>
                         <li>Verifica che l'ID Stanza sia esattamente lo stesso mostrato dall'Admin.</li>
@@ -1006,7 +1051,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setView('SELECTION')}
-                      className="w-full py-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all"
+                      className="w-full py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-white font-bold rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                     >
                       Torna Indietro
                     </button>
@@ -1015,27 +1060,30 @@ export default function App() {
               ) : (
                 <>
                   <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                  <p className="text-zinc-500 font-bold animate-pulse">Connessione alla stanza...</p>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-bold animate-pulse">Connessione alla stanza...</p>
                 </>
               )}
             </div>
           </div>
         );
       }
-      return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} />;
+      return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} theme={theme} toggleTheme={toggleTheme} />;
     }
 
   if (!myTeam) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 transition-colors duration-500">
+        <div className="fixed top-6 right-6 z-50">
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+        </div>
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-50 border border-zinc-200 rounded-3xl p-8 shadow-2xl relative"
+          className="w-full max-w-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-2xl relative"
         >
           <button
             onClick={() => setView('SELECTION')}
-            className="absolute top-6 left-6 p-2 text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 rounded-xl transition-all"
+            className="absolute top-6 left-6 p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
             title="Torna alla selezione"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -1046,33 +1094,33 @@ export default function App() {
               <Trophy className="w-8 h-8 text-emerald-500" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-zinc-950 text-center mb-2">2001 Domande</h1>
-          <p className="text-zinc-600 text-center mb-8">Inserisci l'ID della stanza e il nome della tua squadra</p>
+          <h1 className="text-3xl font-bold text-zinc-950 dark:text-white text-center mb-2">2001 Domande</h1>
+          <p className="text-zinc-600 dark:text-zinc-400 text-center mb-8">Inserisci l'ID della stanza e il nome della tua squadra</p>
           
           <form onSubmit={handleJoin} className="space-y-4">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">ID Stanza</label>
+                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2 ml-1">ID Stanza</label>
                 <input
                   type="text"
                   value={roomId}
                   onChange={(e) => setRoomId(e.target.value)}
                   placeholder="Es. 12345678"
                   className={cn(
-                    "w-full bg-white border rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
-                    connectionError ? "border-red-200" : "border-zinc-200"
+                    "w-full bg-white dark:bg-zinc-800 border rounded-2xl px-5 py-4 text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all",
+                    connectionError ? "border-red-200" : "border-zinc-200 dark:border-zinc-700"
                   )}
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">Nome Squadra</label>
+                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2 ml-1">Nome Squadra</label>
                 <input
                   type="text"
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
                   placeholder="Es. I Geni del Quiz"
-                  className="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-5 py-4 text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                   required
                 />
               </div>
@@ -1080,11 +1128,11 @@ export default function App() {
 
             {connectionError && (
               <div className="space-y-4">
-                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 p-4 rounded-2xl flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="text-xs text-red-600 font-medium leading-relaxed">{connectionError}</p>
-                    <p className="text-[10px] text-red-400 italic">Consiglio: Se sei su rete mobile, prova a collegarti al Wi-Fi dell'Admin.</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium leading-relaxed">{connectionError}</p>
+                    <p className="text-[10px] text-red-400 dark:text-red-500/60 italic">Consiglio: Se sei su rete mobile, prova a collegarti al Wi-Fi dell'Admin.</p>
                   </div>
                 </div>
                 <button
@@ -1093,7 +1141,7 @@ export default function App() {
                     peerService.reset();
                     handleJoin({ preventDefault: () => {} } as any);
                   }}
-                  className="w-full py-3 bg-zinc-100 text-zinc-600 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-all"
+                  className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                 >
                   Riprova Connessione
                 </button>
@@ -1105,12 +1153,12 @@ export default function App() {
               disabled={isConnecting}
               className={cn(
                 "w-full py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 font-bold",
-                isConnecting ? "bg-zinc-100 text-zinc-400 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-400 text-zinc-950"
+                isConnecting ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-400 text-zinc-950"
               )}
             >
               {isConnecting ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-zinc-300 dark:border-zinc-700 border-t-zinc-500 rounded-full animate-spin" />
                   Connessione...
                 </>
               ) : (
@@ -1141,7 +1189,7 @@ export default function App() {
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center transition-colors duration-500">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-zinc-500 font-bold animate-pulse">Sincronizzazione dati...</p>
@@ -1151,7 +1199,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-zinc-950 flex flex-col">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-950 dark:text-white flex flex-col transition-colors duration-500">
       {/* Confirmation Modal */}
       <AnimatePresence>
         {showConfirmation && (
@@ -1164,7 +1212,7 @@ export default function App() {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl space-y-6"
+        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl space-y-6"
             >
               <div className="text-center space-y-2">
                 <h3 className="text-2xl font-black text-zinc-950">Confermi la risposta?</h3>
@@ -1193,18 +1241,19 @@ export default function App() {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="p-4 sm:p-6 border-b border-zinc-200 flex flex-wrap justify-between items-center gap-4 bg-white/50 backdrop-blur-xl sticky top-0 z-10">
+      <header className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-4 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
             <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
           </div>
           <div className="max-w-[120px] sm:max-w-none">
-            <h2 className="font-bold text-xs sm:text-sm leading-tight truncate">{myTeam.name}</h2>
+            <h2 className="font-bold text-xs sm:text-sm leading-tight truncate dark:text-white">{myTeam.name}</h2>
             <p className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">{myTeam.status}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6">
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
           <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
           <div className="text-right">
             <p className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5 sm:mb-1">Punti</p>
@@ -1229,8 +1278,8 @@ export default function App() {
               <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center mx-auto border-4 border-emerald-500/20">
                 <Users className="w-10 h-10 text-emerald-500 animate-pulse" />
               </div>
-              <h1 className="text-4xl font-black tracking-tight text-zinc-950">In attesa dell'host...</h1>
-              <p className="text-zinc-600">La partita inizierà a breve. Preparati!</p>
+              <h1 className="text-4xl font-black tracking-tight text-zinc-950 dark:text-white">In attesa dell'host...</h1>
+              <p className="text-zinc-600 dark:text-zinc-400">La partita inizierà a breve. Preparati!</p>
               
               <button
                 onClick={() => {
@@ -1271,7 +1320,7 @@ export default function App() {
                 <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}/10</h2>
               </div>
 
-              <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 text-center shadow-2xl space-y-8">
+              <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center shadow-2xl space-y-8">
                 {gameState.isQuestionActive && gameState.currentQuestion ? (
                   <>
                     {gameState.selectedAnswers[myTeam.id] !== undefined ? (
@@ -1280,24 +1329,38 @@ export default function App() {
                           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                         </div>
                         <p className="text-3xl font-black text-emerald-500 uppercase tracking-[0.2em]">Risposta Inviata</p>
-                        <p className="text-zinc-500 font-medium">In attesa delle altre squadre...</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+                          {gameState.allTeamsAnswered ? "Tutte le squadre hanno risposto!" : "In attesa delle altre squadre..."}
+                        </p>
 
-                        {gameState.isQuestionFinished && gameState.currentQuestion && (
+                        {(gameState.isQuestionFinished || gameState.allTeamsAnswered) && gameState.currentQuestion && (
                            <motion.div 
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="p-6 bg-zinc-950 text-white rounded-3xl w-full mt-8 shadow-xl"
+                            className="p-6 bg-zinc-950 text-white rounded-3xl w-full mt-8 shadow-xl space-y-4"
                            >
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
-                              <p className="text-2xl font-black">
-                                {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
-                              </p>
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">La tua risposta</p>
+                                <p className="text-xl font-bold">
+                                  {String.fromCharCode(65 + (gameState.selectedAnswers[myTeam.id] ?? 0))}: {gameState.currentQuestion.options?.[gameState.selectedAnswers[myTeam.id] ?? 0]}
+                                </p>
+                              </div>
+                              
+                              {gameState.isQuestionFinished && (
+                                <div className="pt-4 border-t border-white/10">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                                  <p className="text-2xl font-black">
+                                    {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                                  </p>
+                                  <p className="mt-6 text-emerald-500 font-bold animate-pulse">In attesa della prossima domanda... Preparatevi!</p>
+                                </div>
+                              )}
                            </motion.div>
                         )}
                       </div>
                     ) : (
                       <>
-                        <p className="text-2xl font-bold text-zinc-950">{gameState.currentQuestion.text}</p>
+                        <p className="text-2xl font-bold text-zinc-950 dark:text-white">{gameState.currentQuestion.text}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {gameState.currentQuestion.options?.map((option, idx) => (
                             <button
@@ -1305,7 +1368,7 @@ export default function App() {
                               disabled={!gameState.isQuestionActive || gameState.selectedAnswers[myTeam.id] !== undefined}
                               onClick={() => handleAnswer(idx)}
                               className={cn(
-                                "bg-white border rounded-2xl p-6 text-left transition-all flex items-center gap-4 group relative overflow-hidden",
+                                "bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl p-6 text-left transition-all flex items-center gap-4 group relative overflow-hidden",
                                 gameState.selectedAnswers[myTeam.id] === idx 
                                   ? "border-emerald-500 bg-emerald-500/10" 
                                   : gameState.selectedAnswers[myTeam.id] !== undefined
@@ -1356,11 +1419,11 @@ export default function App() {
                           </p>
                        </motion.div>
                     )}
-                    <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center animate-pulse">
-                      <Zap className="w-8 h-8 text-zinc-400" />
+                    <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
+                      <Zap className="w-8 h-8 text-zinc-400 dark:text-zinc-600" />
                     </div>
-                    <p className="text-3xl font-black text-zinc-400 uppercase tracking-[0.2em]">Prossima Domanda</p>
-                    <p className="text-zinc-500 font-medium">L'host sta preparando la sfida...</p>
+                    <p className="text-3xl font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                    <p className="text-zinc-500 dark:text-zinc-400 font-medium">L'host sta preparando la sfida...</p>
                   </div>
                 )}
               </div>
@@ -1410,8 +1473,8 @@ export default function App() {
 
               {gameState.isQuestionActive && gameState.currentQuestion ? (
                 <div className="w-full space-y-8">
-                  <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 text-center w-full shadow-2xl">
-                    <p className="text-3xl font-bold text-zinc-950 leading-tight">{gameState.currentQuestion.text}</p>
+                  <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center w-full shadow-2xl">
+                    <p className="text-3xl font-bold text-zinc-950 dark:text-white leading-tight">{gameState.currentQuestion.text}</p>
                   </div>
 
                   {gameState.currentQuestion.options && (
@@ -1419,7 +1482,7 @@ export default function App() {
                       {gameState.currentQuestion.options.map((option, idx) => (
                         <div 
                           key={idx} 
-                          className="bg-white border border-zinc-200 rounded-2xl p-6 text-left flex items-center gap-4 opacity-50 cursor-not-allowed group"
+                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 text-left flex items-center gap-4 opacity-50 cursor-not-allowed group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-zinc-400">
                             {String.fromCharCode(65 + idx)}
@@ -1431,12 +1494,12 @@ export default function App() {
                   )}
                 </div>
               ) : (
-                <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
-                  <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center animate-pulse">
-                    <Zap className="w-8 h-8 text-zinc-400" />
+                <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
+                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
+                    <Zap className="w-8 h-8 text-zinc-400 dark:text-zinc-600" />
                   </div>
-                  <p className="text-3xl font-black text-zinc-400 uppercase tracking-[0.2em]">Prossima Domanda</p>
-                  <p className="text-zinc-500 font-medium">L'host sta preparando la sfida...</p>
+                  <p className="text-3xl font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">L'host sta preparando la sfida...</p>
                 </div>
               )}
 
@@ -1472,7 +1535,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white border border-zinc-200 rounded-2xl px-6 py-4 flex items-center gap-4 shadow-lg"
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 shadow-lg"
                 >
                   <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
                     <Zap className="w-4 h-4 text-zinc-950" />
@@ -1522,7 +1585,7 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null }) {
+function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme, toggleTheme }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void }) {
   const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase === 'LOBBY' ? 'QUAL_1' : gameState.phase);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1620,13 +1683,13 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
   };
 
   return (
-    <div className="min-h-screen bg-white text-zinc-950 p-4 sm:p-8">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-950 dark:text-white p-4 sm:p-8 transition-colors duration-500">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <header className="flex flex-col lg:flex-row justify-between items-center gap-6 text-center lg:text-left">
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
             <button
               onClick={onBack}
-              className="p-3 bg-zinc-100 border border-zinc-200 rounded-2xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-200 transition-all"
+              className="p-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
               title="Torna alla selezione"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -1638,10 +1701,10 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               <h1 className="text-2xl sm:text-3xl font-black">Admin Dashboard</h1>
               <div className="flex flex-col gap-1 mt-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-zinc-500 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
+                  <p className="text-zinc-500 dark:text-zinc-400 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
                   <div className={cn(
                     "w-2 h-2 rounded-full animate-pulse",
-                    myPeerId ? "bg-emerald-500" : "bg-zinc-300"
+                    myPeerId ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
                   )} title={myPeerId ? "Connesso al server" : "Connessione..."} />
                   {myPeerId && (
                     <button 
@@ -1649,7 +1712,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                         navigator.clipboard.writeText(myPeerId);
                         alert("ID Stanza copiato!");
                       }}
-                      className="p-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
+                      className="p-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
                       title="Copia ID"
                     >
                       <Copy className="w-3 h-3" />
@@ -1666,11 +1729,22 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full lg:w-auto">
+            <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              {gameState.phase.startsWith('QUAL_') && gameState.phase !== 'QUAL_RESULTS' && (
+                <>
+                  <button onClick={() => sendAction('NEXT_QUESTION')} className="px-6 py-3 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                    Prossima Domanda
+                  </button>
+                  <button onClick={() => sendAction('TOGGLE_QUESTION')} className={cn("px-6 py-3 font-black rounded-2xl transition-all text-sm", gameState.isQuestionActive ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20")}>
+                    {gameState.isQuestionActive ? 'Ferma Tempo' : 'Attiva Domanda'}
+                  </button>
+                </>
+              )}
               <button 
                 onClick={() => setShowManualEntry(true)}
-                className="flex-1 sm:flex-none px-6 py-3 bg-emerald-500 text-zinc-950 rounded-2xl font-black hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-none px-6 py-3 bg-zinc-950 text-white rounded-2xl font-black hover:bg-zinc-800 transition-all text-sm flex items-center justify-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 Aggiungi Domande
@@ -1678,7 +1752,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               {gameState.phase === 'LOBBY' && (
                 <button 
                   onClick={() => sendAction('START_GAME')}
-                  className="flex-1 sm:flex-none px-6 py-3 bg-zinc-950 text-white rounded-2xl font-black hover:bg-zinc-800 transition-all text-sm"
+                  className="flex-1 sm:flex-none px-6 py-3 bg-emerald-500 text-zinc-950 rounded-2xl font-black hover:bg-emerald-400 transition-all text-sm"
                 >
                   Inizia Partita
                 </button>
@@ -1698,24 +1772,24 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
         </header>
 
         {/* Question Library Section */}
-        <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4 shadow-sm">
+        <section className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-black text-zinc-950 flex items-center gap-2">
+              <h2 className="text-lg font-black text-zinc-950 dark:text-white flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-emerald-500" />
                 Libreria Domande
               </h2>
-              <p className="text-xs text-zinc-500">Seleziona le domande dai PDF caricati o dalle cartelle predefinite</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Seleziona le domande dai PDF caricati o dalle cartelle predefinite</p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-1.5 shadow-sm">
+              <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 shadow-sm">
                 <Search className="w-3 h-3 text-zinc-400" />
                 <input 
                   type="text" 
                   placeholder="Cerca domanda..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="text-xs bg-transparent outline-none w-32 sm:w-48"
+                  className="text-xs bg-transparent outline-none w-32 sm:w-48 text-zinc-950 dark:text-white"
                 />
               </div>
               <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-1.5">
@@ -1739,7 +1813,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
             {Object.entries(questionsBySource).map(([source, questions]) => {
               const qs = questions as Question[];
               return (
-                <div key={source} className="bg-white border border-zinc-200 rounded-2xl overflow-hidden group hover:border-emerald-500/50 transition-all shadow-sm">
+                <div key={source} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden group hover:border-emerald-500/50 transition-all shadow-sm">
                   <div className="p-4 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/50">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center shrink-0">
@@ -1778,7 +1852,12 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                           <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
                             {qs.map(q => (
                               <div key={q.id} className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-zinc-50 group/item">
-                                <p className="text-[10px] text-zinc-600 truncate flex-1">{q.text}</p>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {gameState.usedQuestionIds.includes(q.id) && (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                                  )}
+                                  <p className="text-[10px] text-zinc-600 truncate">{q.text}</p>
+                                </div>
                                 <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
                                   <button 
                                     onClick={() => sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions: [q], fileName: source })}
@@ -1885,7 +1964,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               )}
             </div>
             {gameState.leaderboardMusicUrl && (
-              <div className="flex items-center gap-3 bg-white border border-zinc-200 px-4 py-3 rounded-2xl w-full sm:w-auto overflow-hidden">
+              <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 rounded-2xl w-full sm:w-auto overflow-hidden">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span className="text-xs text-zinc-500 truncate max-w-[200px]">
                   {gameState.leaderboardMusicUrl.includes('/uploads/') ? 'Musica Caricata' : 'Musica Predefinita'}
@@ -1904,7 +1983,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                 Stato Partita
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex items-center justify-between">
+                <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Round</p>
                     <p className="text-lg font-black text-emerald-500">{gameState.round}</p>
@@ -1955,7 +2034,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               </div>
 
               {gameState.currentQuestion && (
-                <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4">
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Domanda Corrente</p>
                   <p className="text-xl font-bold text-zinc-950">{gameState.currentQuestion.text}</p>
                   {gameState.currentQuestion.options && (
@@ -2006,17 +2085,11 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               <div className="flex flex-wrap gap-4 pt-4 items-center">
                 {gameState.phase.startsWith('QUAL_') && gameState.phase !== 'QUAL_RESULTS' && (
                   <>
-                    <button onClick={() => sendAction('NEXT_QUESTION')} className="px-8 py-4 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all">
-                      Prossima Domanda
-                    </button>
                     {gameState.showRoundWinner && (
                       <button onClick={() => sendAction('START_NEXT_ROUND')} className="px-8 py-4 bg-amber-500 text-zinc-950 font-black rounded-2xl hover:bg-amber-400 transition-all animate-bounce">
                         Avvia Prossimo Round
                       </button>
                     )}
-                    <button onClick={() => sendAction('TOGGLE_QUESTION')} className={cn("px-8 py-4 font-black rounded-2xl transition-all", gameState.isQuestionActive ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20")}>
-                      {gameState.isQuestionActive ? 'Ferma Tempo' : 'Attiva Domanda'}
-                    </button>
                   </>
                 )}
                 {gameState.phase === 'QUAL_RESULTS' && (
@@ -2046,7 +2119,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
                 </div>
                 <div className="space-y-2">
                   {gameState.buzzes.map((buzz, i) => (
-                    <div key={buzz.teamId} className={cn("flex justify-between items-center p-4 rounded-2xl border", i === 0 ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20" : "bg-white border-zinc-200 opacity-60")}>
+                    <div key={buzz.teamId} className={cn("flex justify-between items-center p-4 rounded-2xl border", i === 0 ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 opacity-60")}>
                       <div className="flex items-center gap-4">
                         <span className={cn("w-8 h-8 flex items-center justify-center rounded-full font-black text-sm", i === 0 ? "bg-emerald-500 text-zinc-950" : "bg-zinc-100 text-zinc-500")}>
                           {i + 1}
@@ -2090,7 +2163,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId }: { g
               </h3>
               <div className="space-y-4">
                 {[...gameState.teams].sort((a, b) => b.score - a.score).map(team => (
-                  <div key={team.id} className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-3">
+                  <div key={team.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-bold text-zinc-950">{team.name}</p>
@@ -2134,7 +2207,7 @@ function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onSco
   const teamB = teams.find(t => t.id === match.teamBId);
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-6">
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-6">
       <div className="flex justify-between items-center gap-4">
         <div className="flex-1 text-center space-y-2">
           <p className="font-bold truncate text-zinc-950">{teamA?.name}</p>
@@ -2164,7 +2237,7 @@ function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onSco
   );
 }
 
-function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null }) {
+function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId, theme, toggleTheme }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void }) {
   const sortedTeams = [...gameState.teams].sort((a, b) => b.score - a.score);
 
   const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
@@ -2174,18 +2247,19 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                     gameState.phase === 'FINAL' ? 'Finale' : 'Gara';
 
   return (
-    <div className="min-h-screen bg-white text-zinc-950 p-4 sm:p-8 flex flex-col items-center overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-950 dark:text-white p-4 sm:p-8 flex flex-col items-center overflow-x-hidden transition-colors duration-500">
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="fixed top-4 left-4 sm:top-8 sm:left-8 z-40 p-3 bg-white/50 backdrop-blur-sm border border-zinc-200 rounded-2xl text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 transition-all"
+        className="fixed top-4 left-4 sm:top-8 sm:left-8 z-40 p-3 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-all"
         title="Torna alla selezione"
       >
         <ArrowLeft className="w-5 h-5" />
       </button>
 
-      {/* Audio Status Indicator */}
+      {/* Audio Status Indicator & Theme Toggle */}
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col gap-2">
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
         <button 
           onClick={() => {
             // This button allows manual unlocking if needed
@@ -2242,7 +2316,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-white/95 flex flex-col items-center justify-center p-6 text-center"
+            className="fixed inset-0 z-[100] bg-white/95 dark:bg-zinc-950/95 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
@@ -2277,7 +2351,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-white/90 backdrop-blur-md p-6 text-center"
+            className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md p-6 text-center"
           >
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
@@ -2379,20 +2453,20 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             className="w-full max-w-4xl mb-8 px-4"
           >
-            <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(16,185,129,0.15)] relative overflow-hidden group">
+            <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border-2 border-emerald-500/30 dark:border-emerald-500/20 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(16,185,129,0.15)] relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                 <FileText className="w-24 h-24 text-emerald-500" />
               </div>
               <div className="relative z-10 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className={cn(
-                    "px-4 py-1.5 text-zinc-950 text-[10px] font-black uppercase tracking-[0.2em] rounded-full",
+                    "px-4 py-1.5 text-zinc-950 dark:text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full",
                     gameState.isQuestionFinished ? "bg-amber-500" : "bg-emerald-500"
                   )}>
                     {gameState.isQuestionFinished ? "Risultato Domanda" : "Domanda in corso"}
                   </div>
                 </div>
-                <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 leading-tight">
+                <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 dark:text-white leading-tight">
                   {gameState.currentQuestion.text}
                 </h3>
 
@@ -2400,7 +2474,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 p-6 bg-zinc-950 text-white rounded-3xl"
+                    className="mt-8 p-6 bg-zinc-950 dark:bg-zinc-800 text-white rounded-3xl"
                   >
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
                     <p className="text-3xl sm:text-5xl font-black">
@@ -2430,10 +2504,10 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className={cn(
-                  "relative overflow-hidden bg-white border border-zinc-100 rounded-3xl p-6 flex items-center justify-between shadow-xl",
-                  isFirst && "border-amber-500/50 bg-amber-50/50",
-                  isSecond && "border-zinc-200 bg-zinc-50/50",
-                  isThird && "border-orange-200 bg-orange-50/50"
+                  "relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 flex items-center justify-between shadow-xl",
+                  isFirst && "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20",
+                  isSecond && "border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50",
+                  isThird && "border-orange-200 dark:border-orange-900/30 bg-orange-50/50 dark:bg-orange-900/10"
                 )}
               >
                 {isFirst && (
@@ -2446,9 +2520,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   <div className={cn(
                     "w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black shadow-inner",
                     isFirst ? "bg-amber-500 text-zinc-950" :
-                    isSecond ? "bg-zinc-200 text-zinc-600" :
-                    isThird ? "bg-orange-100 text-orange-700" :
-                    "bg-zinc-50 text-zinc-400 border border-zinc-100"
+                    isSecond ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300" :
+                    isThird ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400" :
+                    "bg-zinc-50 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-100 dark:border-zinc-700"
                   )}>
                     {isFirst ? (
                       <div className="relative">
@@ -2468,7 +2542,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   <div>
                     <h3 className={cn(
                       "text-2xl font-black tracking-tight",
-                      isFirst ? "text-amber-600" : "text-zinc-950"
+                      isFirst ? "text-amber-600 dark:text-amber-500" : "text-zinc-950 dark:text-white"
                     )}>
                       {team.name}
                     </h3>
@@ -2477,7 +2551,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                         "w-2 h-2 rounded-full",
                         team.status === 'eliminata' ? "bg-red-500" : "bg-emerald-500"
                       )} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                         {team.status}
                       </span>
                     </div>
@@ -2485,10 +2559,10 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                 </div>
 
                 <div className="text-right relative z-10">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Punteggio</p>
+                  <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Punteggio</p>
                   <p className={cn(
                     "text-4xl font-black",
-                    isFirst ? "text-amber-600" : "text-zinc-950"
+                    isFirst ? "text-amber-600 dark:text-amber-500" : "text-zinc-950 dark:text-white"
                   )}>
                     {team.score}
                   </p>
@@ -2499,9 +2573,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         </AnimatePresence>
 
         {sortedTeams.length === 0 && (
-          <div className="text-center py-20 bg-zinc-50 border border-dashed border-zinc-200 rounded-3xl">
-            <Users className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
-            <p className="text-zinc-400 font-medium">Nessuna squadra collegata</p>
+          <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/50 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
+            <Users className="w-12 h-12 text-zinc-200 dark:text-zinc-800 mx-auto mb-4" />
+            <p className="text-zinc-400 dark:text-zinc-500 font-medium">Nessuna squadra collegata</p>
           </div>
         )}
       </div>

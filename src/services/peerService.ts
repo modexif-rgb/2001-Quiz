@@ -17,44 +17,126 @@ class PeerService {
   private messageQueue: any[] = [];
 
   private onIdCallbacks: Set<(id: string) => void> = new Set();
+  private isInitializing: boolean = false;
+  private lastFailedId: string | null = null;
+  private lastInitTime: number = 0;
 
   constructor() {
     this.initializePeer();
+    
+    // Ensure clean shutdown on window close
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        if (this.peer && !this.peer.destroyed) {
+          this.peer.destroy();
+        }
+      });
+      
+      window.addEventListener('online', () => {
+        console.log('PeerJS: Network restored, re-initializing...');
+        this.initializePeer();
+      });
+    }
   }
 
-  private initializePeer() {
+  private initializePeer(forceNew: boolean = false) {
+    if (this.isInitializing && !forceNew) return;
+    
+    // Rate limit initialization (max once every 2 seconds) unless forced
+    const now = Date.now();
+    if (!forceNew && now - this.lastInitTime < 2000) {
+      console.log('PeerJS: Initialization rate limited, waiting...');
+      setTimeout(() => this.initializePeer(), 2000 - (now - this.lastInitTime));
+      return;
+    }
+    
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.warn('PeerJS: Browser is offline, delaying initialization...');
+      setTimeout(() => this.initializePeer(), 5000);
+      return;
+    }
+
+    if (!forceNew && this.peer && !this.peer.destroyed && !this.peer.disconnected) {
+      console.log('PeerJS: Peer already active, skipping initialization');
+      return;
+    }
+    
+    this.isInitializing = true;
+    this.lastInitTime = now;
+
     const generate8DigitId = () => Math.floor(10000000 + Math.random() * 90000000).toString();
-    const id = generate8DigitId();
+    
+    // Use sessionStorage instead of localStorage to prevent ID conflicts between tabs
+    // sessionStorage is unique per tab, so each tab gets its own stable ID
+    let id = sessionStorage.getItem('peer_id');
+    if (forceNew || !id || id === this.lastFailedId || id === 'null' || id === 'undefined') {
+      id = generate8DigitId();
+      sessionStorage.setItem('peer_id', id);
+      this.lastFailedId = null; // Clear it once we generate a new one
+    }
     
     console.log('PeerJS: Initializing with ID:', id);
     
-    this.peer = new Peer(id, {
-      debug: 2, // Reduced for production but still helpful
-      secure: true, // Force secure for Netlify/HTTPS
-      config: {
-        'iceServers': [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' },
-          { urls: 'stun:stun.services.mozilla.com' },
-          { urls: 'stun:stun.stunprotocol.org' },
-          { urls: 'stun:stun.voiparound.com' },
-          { urls: 'stun:stun.voipbuster.com' },
-          { urls: 'stun:stun.voipstunt.com' },
-          { urls: 'stun:stun.voxgratia.org' }
-        ],
-        'iceCandidatePoolSize': 10
+    // If we have an old peer, destroy it and wait for it to be fully gone
+    if (this.peer) {
+      console.log('PeerJS: Cleaning up existing peer instance before re-initializing');
+      try {
+        const p = this.peer;
+        this.peer = null;
+        p.destroy();
+      } catch (e) {
+        console.error('PeerJS: Error destroying old peer:', e);
       }
-    });
+      
+      // Wait a bit longer to ensure the socket is closed and resources are freed
+      this.isInitializing = false;
+      setTimeout(() => this.initializePeer(forceNew), 500);
+      return;
+    }
+
+    try {
+      this.peer = new Peer(id, {
+        debug: 2,
+        secure: true,
+        pingInterval: 5000,
+        config: {
+          'iceServers': [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun.services.mozilla.com' }
+          ],
+          'iceCandidatePoolSize': 10
+        }
+      });
+    } catch (e) {
+      console.error('PeerJS: Critical error during new Peer() instantiation:', e);
+      this.isInitializing = false;
+      return;
+    }
+
+    // Safety timeout for initialization
+    const initTimeout = setTimeout(() => {
+      if (this.isInitializing) {
+        console.warn('PeerJS: Initialization timeout, resetting...');
+        this.isInitializing = false;
+      }
+    }, 10000);
     
-    this.peer.on('open', (id) => {
+    const currentPeer = this.peer;
+    
+    currentPeer.on('open', (id) => {
+      if (this.peer !== currentPeer) return;
+      clearTimeout(initTimeout);
+      this.isInitializing = false;
       console.log('PeerJS: Server connection established. My ID:', id);
       this.onIdCallbacks.forEach(cb => cb(id));
     });
 
-    this.peer.on('connection', (conn) => {
+    currentPeer.on('connection', (conn) => {
+      if (this.peer !== currentPeer) return;
       console.log('PeerJS: Incoming connection from:', conn.peer);
       if (this.isHost) {
         this.handleNewConnection(conn);
@@ -64,33 +146,73 @@ class PeerService {
       }
     });
 
-    this.peer.on('error', (err: any) => {
+    currentPeer.on('disconnected', () => {
+      if (this.peer !== currentPeer) return;
+      console.log('PeerJS: Disconnected from signaling server. Attempting to reconnect...');
+      if (this.peer && !this.peer.destroyed) {
+        try {
+          this.peer.reconnect();
+        } catch (e) {
+          console.error('PeerJS: Reconnect failed:', e);
+        }
+      }
+    });
+
+    currentPeer.on('error', (err: any) => {
+      if (this.peer !== currentPeer) return;
       console.error('PeerJS Global Error:', err.type, err);
+      this.isInitializing = false;
+      clearTimeout(initTimeout);
       
       if (err.type === 'unavailable-id') {
-        this.peer?.destroy();
-        setTimeout(() => this.initializePeer(), 1000);
+        const failedId = sessionStorage.getItem('peer_id');
+        this.lastFailedId = failedId;
+        console.warn('PeerJS: ID already taken, generating new one...', failedId);
+        sessionStorage.removeItem('peer_id');
+        this.isInitializing = false;
+        
+        if (this.peer) {
+          const p = this.peer;
+          this.peer = null;
+          try {
+            p.destroy();
+          } catch (e) {}
+        }
+        
+        // Add a random delay to avoid synchronized retry loops
+        const retryDelay = 500 + Math.random() * 1000;
+        setTimeout(() => this.initializePeer(), retryDelay);
       } else if (err.type === 'peer-unavailable') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
           error: 'Stanza non trovata. Verifica l\'ID e assicurati che l\'Admin sia online.' 
         }));
-      } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+      } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'disconnected') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
-          error: 'Errore di rete o del server PeerJS. Se sei su rete mobile, prova a passare al Wi-Fi.' 
+          error: 'Errore di connessione al server. Riprova tra poco.' 
         }));
+        
+        // If we're disconnected and reconnecting fails, try a full reset after some time
+        setTimeout(() => {
+          if (this.peer && this.peer.disconnected && !this.peer.destroyed) {
+            console.log('PeerJS: Attempting reconnection after network error...');
+            try {
+              this.peer.reconnect();
+            } catch (e) {
+              console.error('PeerJS: Reconnect failed, triggering full reset');
+              this.reset();
+            }
+          } else if (!this.peer || this.peer.destroyed) {
+            this.initializePeer();
+          }
+        }, 5000);
       } else if (err.type === 'webrtc') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
           error: 'Il tuo browser o la tua rete bloccano la connessione WebRTC.' 
         }));
       }
-    });
-
-    this.peer.on('disconnected', () => {
-      console.log('PeerJS: Disconnected from signaling server');
-      this.peer?.reconnect();
     });
   }
 
@@ -100,8 +222,13 @@ class PeerService {
     if (this.countdownInterval) clearInterval(this.countdownInterval);
     this.connections.forEach(conn => conn.close());
     this.connections.clear();
-    this.peer?.destroy();
+    this.isInitializing = false;
     this.initializePeer();
+  }
+
+  forceNewId() {
+    console.log('PeerJS: Forcing new ID generation...');
+    this.initializePeer(true);
   }
 
   getPeerId(): string | undefined {
@@ -202,8 +329,11 @@ class PeerService {
             
             if (answeredCount >= activeTeams.length && activeTeams.length > 0) {
               this.gameState.allTeamsAnswered = true;
+              // Wait 2 seconds showing "All teams answered" then start 3s countdown
               setTimeout(() => {
-                this.startCountdown('QUESTION_ENDING', 5);
+                if (this.gameState?.allTeamsAnswered) {
+                  this.startCountdown('QUESTION_ENDING', 3);
+                }
               }, 2000);
             }
             
@@ -378,6 +508,10 @@ class PeerService {
         if (!this.gameState.questionQueue) this.gameState.questionQueue = [];
         if (qId && !this.gameState.questionQueue.includes(qId)) {
           this.gameState.questionQueue = [...this.gameState.questionQueue, qId];
+          // Mark as used when added to queue as requested
+          if (!this.gameState.usedQuestionIds.includes(qId)) {
+            this.gameState.usedQuestionIds.push(qId);
+          }
         }
         break;
       case 'REMOVE_FROM_QUEUE':
@@ -580,9 +714,13 @@ class PeerService {
     this.timerInterval = setInterval(() => {
       if (!this.gameState || !this.gameState.timerEndTime) return;
       const now = Date.now();
+      // Use floor instead of ceil for more natural feeling countdown if needed, 
+      // but ceil is standard for "seconds remaining"
       const remaining = Math.max(0, Math.ceil((this.gameState.timerEndTime - now) / 1000));
+      
       if (remaining !== this.gameState.timer) {
         this.gameState.timer = remaining;
+        
         if (this.gameState.timer <= 0) {
           this.stopTimer();
           this.gameState.isQuestionActive = false;
@@ -597,7 +735,7 @@ class PeerService {
         }
         this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
       }
-    }, 100);
+    }, 50); // Increased frequency for better precision
   }
 
   private stopTimer() {
@@ -631,7 +769,7 @@ class PeerService {
         }
         this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
       }
-    }, 100);
+    }, 50); // Increased frequency for better precision
   }
 
   private stopCountdown() {
@@ -714,6 +852,18 @@ class PeerService {
       if (!this.peer || this.peer.destroyed) {
         this.initializePeer();
         this.peer?.once('open', () => performConnect());
+        return;
+      }
+
+      if (this.peer.disconnected) {
+        this.peer.reconnect();
+        this.peer.once('open', () => performConnect());
+        return;
+      }
+
+      if (!this.peer.open) {
+        console.log('PeerJS: Waiting for server connection before connecting to host...');
+        this.peer.once('open', () => performConnect());
         return;
       }
 
