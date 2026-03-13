@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { peerService } from './services/peerService';
 import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon, Timer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -434,12 +434,16 @@ export default function App() {
     };
   }, []);
 
+  const lastLoadedMusicUrl = useRef<string>("");
+
   // Update music source when it changes in gameState
   useEffect(() => {
     if (gameState?.leaderboardMusicUrl && leaderboardMusicRef.current) {
-      if (leaderboardMusicRef.current.src !== gameState.leaderboardMusicUrl) {
+      if (lastLoadedMusicUrl.current !== gameState.leaderboardMusicUrl) {
+        console.log("Loading new leaderboard music...");
         leaderboardMusicRef.current.src = gameState.leaderboardMusicUrl;
         leaderboardMusicRef.current.load();
+        lastLoadedMusicUrl.current = gameState.leaderboardMusicUrl;
       }
     }
   }, [gameState?.leaderboardMusicUrl]);
@@ -474,31 +478,39 @@ export default function App() {
     }
 
     // Music logic for leaderboard: "background musicale solamente nella leaderboard quando parte il timer"
-    if (gameState.timerActive && gameState.timer > 0) {
+    if (isLeaderboard && audioEnabled && gameState.timerActive && gameState.timer > 0 && gameState.leaderboardMusicUrl) {
       if (leaderboardMusicRef.current) {
-        const targetTime = 80 - gameState.timer;
+        const audio = leaderboardMusicRef.current;
         
-        // Sync music time: "quando il tempo finisce la canzone si trovi al minuto 1:20" (80s)
-        // Timer starts at 60s. So at timer=60, music should be at 80-60=20s.
-        // At timer=0, music should be at 80s.
-        
-        // Only sync if:
-        // 1. Music is paused (start of timer)
-        // 2. Music is significantly out of sync (> 5 seconds)
-        // 3. We haven't synced for this specific timer session yet
-        const isWayOff = Math.abs(leaderboardMusicRef.current.currentTime - targetTime) > 5;
+        // Ensure src is set correctly
+        if (audio.src !== gameState.leaderboardMusicUrl && !gameState.leaderboardMusicUrl.startsWith('DATA_URL_SYNCED')) {
+           console.log("Syncing audio src in timer effect");
+           audio.src = gameState.leaderboardMusicUrl;
+           audio.load();
+        }
 
-        if (leaderboardMusicRef.current.paused || (!musicSyncedForTimer.current && isWayOff)) {
-          leaderboardMusicRef.current.currentTime = targetTime;
+        const targetTime = 80 - gameState.timer;
+        const isWayOff = Math.abs(audio.currentTime - targetTime) > 2;
+
+        if (audio.paused || (!musicSyncedForTimer.current && isWayOff)) {
+          console.log(`Syncing music: paused=${audio.paused}, isWayOff=${isWayOff}, target=${targetTime}, current=${audio.currentTime}`);
+          if (!isNaN(targetTime) && targetTime >= 0) {
+            audio.currentTime = targetTime;
+          }
           musicSyncedForTimer.current = true;
         }
         
-        if (leaderboardMusicRef.current.paused) {
-          leaderboardMusicRef.current.play().catch(e => console.error("Music play failed", e));
+        if (audio.paused) {
+          audio.play().then(() => {
+            console.log("Music playback started successfully");
+          }).catch(e => {
+            console.error("Music play failed - likely needs user interaction", e);
+          });
         }
       }
     } else {
       if (leaderboardMusicRef.current && !leaderboardMusicRef.current.paused) {
+        console.log("Stopping music (timer inactive or not leaderboard)");
         leaderboardMusicRef.current.pause();
       }
       musicSyncedForTimer.current = false;
@@ -687,7 +699,6 @@ export default function App() {
     e.preventDefault();
     if (password === '12345678') {
       if (userRole === 'ADMIN') {
-        peerService.forceNewId();
         setIsAdmin(true);
         setIsLeaderboard(false);
         // Start hosting if Admin - always start from zero when creating a new room
@@ -1006,7 +1017,7 @@ export default function App() {
   }
 
   if (isAdmin) {
-    return <AdminDashboard gameState={gameState!} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} theme={theme} toggleTheme={toggleTheme} />;
+    return <AdminDashboard gameState={gameState!} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} theme={theme} toggleTheme={toggleTheme} leaderboardMusicRef={leaderboardMusicRef} />;
   }
 
     if (isLeaderboard) {
@@ -1067,7 +1078,7 @@ export default function App() {
           </div>
         );
       }
-      return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} theme={theme} toggleTheme={toggleTheme} />;
+      return <Leaderboard gameState={gameState} audioEnabled={audioEnabled} playSyntheticSound={playSyntheticSound} onBack={() => setView('SELECTION')} myPeerId={myPeerId} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} roomId={roomId} leaderboardMusicRef={leaderboardMusicRef} />;
     }
 
   if (!myTeam) {
@@ -1328,35 +1339,29 @@ export default function App() {
                         <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                         </div>
-                        <p className="text-3xl font-black text-emerald-500 uppercase tracking-[0.2em]">Risposta Inviata</p>
-                        <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-                          {gameState.allTeamsAnswered ? "Tutte le squadre hanno risposto!" : "In attesa delle altre squadre..."}
-                        </p>
+                        <p className="text-3xl font-black text-emerald-500 uppercase tracking-tighter text-center">In attesa della prossima domanda... Preparatevi!</p>
+                        
+                        <div className="w-full max-w-md space-y-4">
+                          <div className="p-6 bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">La tua risposta</p>
+                            <p className="text-xl font-bold text-zinc-900 dark:text-white">
+                              {String.fromCharCode(65 + (gameState.selectedAnswers[myTeam.id] ?? 0))}: {gameState.currentQuestion.options?.[gameState.selectedAnswers[myTeam.id] ?? 0]}
+                            </p>
+                          </div>
 
-                        {(gameState.isQuestionFinished || gameState.allTeamsAnswered) && gameState.currentQuestion && (
-                           <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="p-6 bg-zinc-950 text-white rounded-3xl w-full mt-8 shadow-xl space-y-4"
-                           >
-                              <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">La tua risposta</p>
-                                <p className="text-xl font-bold">
-                                  {String.fromCharCode(65 + (gameState.selectedAnswers[myTeam.id] ?? 0))}: {gameState.currentQuestion.options?.[gameState.selectedAnswers[myTeam.id] ?? 0]}
-                                </p>
-                              </div>
-                              
-                              {gameState.isQuestionFinished && (
-                                <div className="pt-4 border-t border-white/10">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
-                                  <p className="text-2xl font-black">
-                                    {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
-                                  </p>
-                                  <p className="mt-6 text-emerald-500 font-bold animate-pulse">In attesa della prossima domanda... Preparatevi!</p>
-                                </div>
-                              )}
-                           </motion.div>
-                        )}
+                          {gameState.isQuestionFinished && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-6 bg-zinc-950 text-white rounded-3xl shadow-xl border border-zinc-800"
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                              <p className="text-2xl font-black">
+                                {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                              </p>
+                            </motion.div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <>
@@ -1408,16 +1413,27 @@ export default function App() {
                 ) : (
                   <div className="py-12 flex flex-col items-center gap-6">
                     {gameState.isQuestionFinished && gameState.currentQuestion && (
-                       <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="p-6 bg-zinc-950 text-white rounded-3xl w-full mb-6 shadow-xl"
-                       >
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
-                          <p className="text-2xl font-black">
-                            {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
-                          </p>
-                       </motion.div>
+                       <div className="w-full max-w-md space-y-4">
+                          <div className="p-6 bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700 shadow-sm text-center">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">La tua risposta</p>
+                            <p className="text-xl font-bold text-zinc-900 dark:text-white">
+                              {gameState.selectedAnswers[myTeam.id] !== undefined 
+                                ? `${String.fromCharCode(65 + (gameState.selectedAnswers[myTeam.id] ?? 0))}: ${gameState.currentQuestion.options?.[gameState.selectedAnswers[myTeam.id] ?? 0]}`
+                                : "Nessuna risposta data"}
+                            </p>
+                          </div>
+
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-6 bg-zinc-950 text-white rounded-3xl w-full shadow-xl text-center border border-zinc-800"
+                          >
+                             <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                             <p className="text-2xl font-black">
+                               {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                             </p>
+                          </motion.div>
+                       </div>
                     )}
                     <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
                       <Zap className="w-8 h-8 text-zinc-400 dark:text-zinc-600" />
@@ -1585,7 +1601,7 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme, toggleTheme }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void }) {
+function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme, toggleTheme, leaderboardMusicRef }: { gameState: GameState, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void, leaderboardMusicRef: React.RefObject<HTMLAudioElement> }) {
   const [uploadPhase, setUploadPhase] = useState<string>(gameState.phase === 'LOBBY' ? 'QUAL_1' : gameState.phase);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1716,6 +1732,23 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                       title="Copia ID"
                     >
                       <Copy className="w-3 h-3" />
+                    </button>
+                  )}
+                  {gameState.leaderboardMusicUrl && (
+                    <button 
+                      onClick={() => {
+                        if (leaderboardMusicRef.current) {
+                          if (leaderboardMusicRef.current.paused) {
+                            leaderboardMusicRef.current.play().catch(console.error);
+                          } else {
+                            leaderboardMusicRef.current.pause();
+                          }
+                        }
+                      }}
+                      className="p-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
+                      title="Play/Pause Musica"
+                    >
+                      <Zap className="w-3 h-3" />
                     </button>
                   )}
                 </div>
@@ -2237,7 +2270,7 @@ function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onSco
   );
 }
 
-function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId, theme, toggleTheme }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void }) {
+function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId, theme, toggleTheme, isAdmin, roomId, leaderboardMusicRef }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void, isAdmin: boolean, roomId: string, leaderboardMusicRef: React.RefObject<HTMLAudioElement> }) {
   const sortedTeams = [...gameState.teams].sort((a, b) => b.score - a.score);
 
   const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
@@ -2431,10 +2464,38 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         
         <div className="space-y-4">
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 uppercase">Classifica Real-Time</h1>
-          {myPeerId && (
-            <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-xl mx-auto w-fit">
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Stanza:</p>
-              <p className="text-xs font-black text-emerald-500">{myPeerId}</p>
+          {(isAdmin ? myPeerId : roomId) && (
+            <div className="flex flex-wrap items-center justify-center gap-3 mx-auto w-fit">
+              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Stanza:</p>
+                <p className="text-xs font-black text-emerald-500">{isAdmin ? myPeerId : roomId}</p>
+              </div>
+              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
+                <div className={cn("w-2 h-2 rounded-full", gameState.leaderboardMusicUrl ? "bg-emerald-500 animate-pulse" : "bg-zinc-300")} />
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Musica:</p>
+                <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">{gameState.leaderboardMusicUrl ? 'Caricata' : 'Non presente'}</p>
+                {gameState.leaderboardMusicUrl && (
+                  <button 
+                    onClick={() => {
+                      if (leaderboardMusicRef.current) {
+                        if (leaderboardMusicRef.current.paused) {
+                          leaderboardMusicRef.current.play().catch(console.error);
+                        } else {
+                          leaderboardMusicRef.current.pause();
+                        }
+                      }
+                    }}
+                    className="ml-1 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                  >
+                    <Zap className="w-3 h-3 text-emerald-500" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Sync:</p>
+                <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">Live</p>
+              </div>
             </div>
           )}
           <div className="flex flex-col items-center gap-1">
@@ -2444,53 +2505,107 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         </div>
       </motion.div>
       
-      {/* Current Question Display during timer */}
-      <AnimatePresence>
-        {(gameState.timerActive || gameState.isQuestionFinished) && gameState.currentQuestion && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="w-full max-w-4xl mb-8 px-4"
-          >
-            <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border-2 border-emerald-500/30 dark:border-emerald-500/20 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(16,185,129,0.15)] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                <FileText className="w-24 h-24 text-emerald-500" />
-              </div>
-              <div className="relative z-10 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "px-4 py-1.5 text-zinc-950 dark:text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full",
-                    gameState.isQuestionFinished ? "bg-amber-500" : "bg-emerald-500"
-                  )}>
-                    {gameState.isQuestionFinished ? "Risultato Domanda" : "Domanda in corso"}
+      {/* Layout Grid: Question + Leaderboard */}
+      <div className="w-full max-w-7xl px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-20">
+        
+        {/* Left Column: Question (Always visible on large if not empty) */}
+        <div className={cn(
+          "lg:col-span-5 space-y-6 lg:sticky lg:top-24",
+          !(gameState.timerActive || gameState.isQuestionFinished || gameState.currentQuestion) && "hidden lg:block lg:opacity-0"
+        )}>
+          <AnimatePresence mode="wait">
+            {(gameState.timerActive || gameState.isQuestionFinished || gameState.currentQuestion) && gameState.currentQuestion && (
+              <motion.div
+                key={gameState.currentQuestion.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
+                
+                <div className="relative z-10 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className={cn(
+                      "px-4 py-1.5 text-zinc-950 dark:text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full",
+                      gameState.isQuestionFinished ? "bg-amber-500" : "bg-emerald-500"
+                    )}>
+                      {gameState.isQuestionFinished ? "Risultato Domanda" : "Domanda in corso"}
+                    </div>
+                    {gameState.timerActive && (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700">
+                        <Timer className={cn("w-4 h-4", gameState.timer <= 10 ? "text-red-500 animate-pulse" : "text-emerald-500")} />
+                        <span className={cn("text-lg font-black tabular-nums", gameState.timer <= 10 ? "text-red-500" : "text-zinc-900 dark:text-white")}>
+                          {gameState.timer}s
+                        </span>
+                      </div>
+                    )}
                   </div>
+                  
+                  <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 dark:text-white leading-[1.1] tracking-tighter">
+                    {gameState.currentQuestion.text}
+                  </h3>
+
+                  {gameState.currentQuestion.options && (
+                    <div className="grid grid-cols-1 gap-3 mt-8">
+                      {gameState.currentQuestion.options.map((option, idx) => {
+                        const isCorrect = gameState.phase === 'QUAL_RESULTS' && idx === gameState.currentQuestion?.correctAnswer;
+                        return (
+                          <div 
+                            key={idx}
+                            className={cn(
+                              "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all",
+                              isCorrect 
+                                ? "bg-emerald-500 border-emerald-400 text-zinc-950 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
+                                : "bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg",
+                              isCorrect ? "bg-zinc-950 text-emerald-500" : "bg-white dark:bg-zinc-700 text-zinc-400"
+                            )}>
+                              {String.fromCharCode(65 + idx)}
+                            </div>
+                            <span className="font-bold text-lg">{option}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {gameState.isQuestionFinished && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 p-6 bg-zinc-950 dark:bg-zinc-800 text-white rounded-3xl border border-zinc-800"
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                      <p className="text-2xl sm:text-3xl font-black">
+                        {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                      </p>
+                    </motion.div>
+                  )}
                 </div>
-                <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 dark:text-white leading-tight">
-                  {gameState.currentQuestion.text}
-                </h3>
-
-                {gameState.isQuestionFinished && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 p-6 bg-zinc-950 dark:bg-zinc-800 text-white rounded-3xl"
-                  >
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
-                    <p className="text-3xl sm:text-5xl font-black">
-                      {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
-                    </p>
-                  </motion.div>
-                )}
-              </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* If no question, show a placeholder or nothing */}
+          {!(gameState.timerActive || gameState.isQuestionFinished || gameState.currentQuestion) && (
+            <div className="hidden lg:flex flex-col items-center justify-center py-20 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] text-center space-y-4">
+              <Zap className="w-12 h-12 text-zinc-200 dark:text-zinc-800" />
+              <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs">In attesa della prossima sfida</p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </div>
 
-      <div className="w-full max-w-4xl space-y-3 sm:space-y-4 px-4">
-        <AnimatePresence mode="popLayout">
-          {sortedTeams.map((team, index) => {
+        {/* Right Column: Leaderboard */}
+        <div className={cn(
+          "space-y-3 sm:space-y-4",
+          (gameState.timerActive || gameState.isQuestionFinished || gameState.currentQuestion) ? "lg:col-span-7" : "lg:col-span-12 max-w-4xl mx-auto w-full"
+        )}>
+          <AnimatePresence mode="popLayout">
+            {sortedTeams.map((team, index) => {
             const isFirst = index === 0;
             const isSecond = index === 1;
             const isThird = index === 2;
@@ -2580,5 +2695,6 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

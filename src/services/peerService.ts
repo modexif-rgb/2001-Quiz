@@ -20,6 +20,7 @@ class PeerService {
   private isInitializing: boolean = false;
   private lastFailedId: string | null = null;
   private lastInitTime: number = 0;
+  private chunkBuffers: Map<string, { chunks: string[], total: number, type: string }> = new Map();
 
   constructor() {
     this.initializePeer();
@@ -66,12 +67,19 @@ class PeerService {
 
     const generate8DigitId = () => Math.floor(10000000 + Math.random() * 90000000).toString();
     
-    // Use sessionStorage instead of localStorage to prevent ID conflicts between tabs
-    // sessionStorage is unique per tab, so each tab gets its own stable ID
+    // Use sessionStorage for tab-specific stability, seeded from localStorage
     let id = sessionStorage.getItem('peer_id');
+    if (!id || id === 'null' || id === 'undefined') {
+      id = localStorage.getItem('peer_id');
+      if (id && id !== 'null' && id !== 'undefined') {
+        sessionStorage.setItem('peer_id', id);
+      }
+    }
+
     if (forceNew || !id || id === this.lastFailedId || id === 'null' || id === 'undefined') {
       id = generate8DigitId();
       sessionStorage.setItem('peer_id', id);
+      localStorage.setItem('peer_id', id);
       this.lastFailedId = null; // Clear it once we generate a new one
     }
     
@@ -148,9 +156,12 @@ class PeerService {
 
     currentPeer.on('disconnected', () => {
       if (this.peer !== currentPeer) return;
-      console.log('PeerJS: Disconnected from signaling server. Attempting to reconnect...');
-      if (this.peer && !this.peer.destroyed) {
+      console.log('PeerJS: Disconnected from signaling server.');
+      
+      // Don't auto-reconnect if destroyed
+      if (this.peer && !this.peer.destroyed && this.peer.disconnected) {
         try {
+          console.log('PeerJS: Attempting to reconnect...');
           this.peer.reconnect();
         } catch (e) {
           console.error('PeerJS: Reconnect failed:', e);
@@ -164,11 +175,17 @@ class PeerService {
       this.isInitializing = false;
       clearTimeout(initTimeout);
       
-      if (err.type === 'unavailable-id') {
-        const failedId = sessionStorage.getItem('peer_id');
+      const isAborting = err.message?.includes('Aborting') || err.toString().includes('Aborting');
+      
+      if (err.type === 'unavailable-id' || isAborting) {
+        const failedId = sessionStorage.getItem('peer_id') || localStorage.getItem('peer_id');
         this.lastFailedId = failedId;
-        console.warn('PeerJS: ID already taken, generating new one...', failedId);
+        console.warn('PeerJS: Fatal error or ID taken, generating new one...', failedId);
+        
+        // Clear from both to ensure a fresh start
         sessionStorage.removeItem('peer_id');
+        localStorage.removeItem('peer_id');
+        
         this.isInitializing = false;
         
         if (this.peer) {
@@ -180,8 +197,8 @@ class PeerService {
         }
         
         // Add a random delay to avoid synchronized retry loops
-        const retryDelay = 500 + Math.random() * 1000;
-        setTimeout(() => this.initializePeer(), retryDelay);
+        const retryDelay = 1000 + Math.random() * 2000;
+        setTimeout(() => this.initializePeer(true), retryDelay);
       } else if (err.type === 'peer-unavailable') {
         this.callbacks.forEach(cb => cb({ 
           type: 'CONNECTION_ERROR', 
@@ -223,7 +240,19 @@ class PeerService {
     this.connections.forEach(conn => conn.close());
     this.connections.clear();
     this.isInitializing = false;
-    this.initializePeer();
+    
+    if (this.peer) {
+      try {
+        this.peer.destroy();
+        this.peer = null;
+      } catch (e) {}
+    }
+    
+    // Clear stored IDs to ensure a fresh one on reset
+    sessionStorage.removeItem('peer_id');
+    localStorage.removeItem('peer_id');
+    
+    this.initializePeer(true);
   }
 
   forceNewId() {
@@ -246,8 +275,14 @@ class PeerService {
     this.connections.set(conn.peer, conn);
     
     conn.on('data', (data: any) => {
-      console.log('PeerJS Host: Received data from', conn.peer, data);
-      this.handleHostMessage(conn, data);
+      if (data.type === 'CHUNK') {
+        const reassembled = this.handleChunk(data);
+        if (reassembled) {
+          this.handleHostMessage(conn, reassembled);
+        }
+      } else {
+        this.handleHostMessage(conn, data);
+      }
     });
 
     conn.on('open', () => {
@@ -268,7 +303,11 @@ class PeerService {
 
         // If there's a large music URL, send it once separately
         if (musicUrl && musicUrl.startsWith('data:')) {
-          conn.send({ type: 'MUSIC_UPDATE', url: musicUrl });
+          if (musicUrl.length > 64000) {
+            this.sendChunked(conn, 'MUSIC_UPDATE', { url: musicUrl });
+          } else {
+            conn.send({ type: 'MUSIC_UPDATE', url: musicUrl });
+          }
         }
       }
     });
@@ -800,6 +839,65 @@ class PeerService {
     this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
   }
 
+  private sendChunked(conn: DataConnection, type: string, payload: any) {
+    try {
+      const json = JSON.stringify(payload);
+      const CHUNK_SIZE = 64000; // 64KB chunks
+      const totalChunks = Math.ceil(json.length / CHUNK_SIZE);
+      const transferId = uuidv4();
+
+      console.log(`PeerJS: Sending large message (${json.length} bytes) in ${totalChunks} chunks. ID: ${transferId}`);
+
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = json.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        conn.send({
+          type: 'CHUNK',
+          transferId,
+          chunkType: type,
+          chunk,
+          index: i,
+          total: totalChunks
+        });
+      }
+    } catch (e) {
+      console.error('PeerJS: Error during chunked send:', e);
+    }
+  }
+
+  private handleChunk(data: any) {
+    const { transferId, chunk, index, total, chunkType } = data;
+    
+    if (!this.chunkBuffers.has(transferId)) {
+      this.chunkBuffers.set(transferId, { chunks: [], total, type: chunkType });
+    }
+    
+    const buffer = this.chunkBuffers.get(transferId)!;
+    buffer.chunks[index] = chunk;
+    
+    // Check if all chunks received
+    const receivedCount = buffer.chunks.filter(c => c !== undefined).length;
+    
+    if (receivedCount % 10 === 0 || receivedCount === total) {
+      console.log(`PeerJS: Receiving chunked data ${transferId}: ${receivedCount}/${total}`);
+    }
+
+    if (receivedCount === total) {
+      try {
+        const fullJson = buffer.chunks.join('');
+        const fullPayload = JSON.parse(fullJson);
+        this.chunkBuffers.delete(transferId);
+        
+        // Reconstruct the original message format
+        return { type: buffer.type, ...fullPayload };
+      } catch (e) {
+        console.error('PeerJS: Error reassembling chunks:', e);
+        this.chunkBuffers.delete(transferId);
+        return null;
+      }
+    }
+    return null;
+  }
+
   private broadcast(data: any) {
     if (!this.isHost) return;
     
@@ -820,10 +918,12 @@ class PeerService {
 
     this.connections.forEach(conn => {
       if (conn.open) {
-        // We could potentially send full state to some peers and stripped to others,
-        // but for now, everyone except the host gets the stripped version.
-        // The host (Admin) already has the full state in this.gameState.
-        conn.send(clientData);
+        // Use chunking for large music updates
+        if (data.type === 'MUSIC_UPDATE' && data.url && data.url.length > 64000) {
+          this.sendChunked(conn, 'MUSIC_UPDATE', { url: data.url });
+        } else {
+          conn.send(clientData);
+        }
       }
     });
 
@@ -904,7 +1004,14 @@ class PeerService {
       });
 
       conn.on('data', (data: any) => {
-        this.callbacks.forEach(cb => cb(data));
+        if (data.type === 'CHUNK') {
+          const reassembled = this.handleChunk(data);
+          if (reassembled) {
+            this.callbacks.forEach(cb => cb(reassembled));
+          }
+        } else {
+          this.callbacks.forEach(cb => cb(data));
+        }
       });
 
       conn.on('close', () => {
