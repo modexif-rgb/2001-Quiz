@@ -265,9 +265,47 @@ class PeerService {
   }
 
   // --- Host Logic ---
+  private fillQueueAutomatically() {
+    if (!this.gameState) return;
+
+    const allPreloaded = PRELOADED_QUESTIONS.flatMap(f => f.questions);
+    const usedIds = new Set(this.gameState.usedQuestionIds);
+    const queueIds = new Set(this.gameState.questionQueue);
+
+    const getQuestionsFromSource = (sourceName: string, count: number) => {
+      const available = allPreloaded.filter(q => 
+        q.source === sourceName && 
+        !usedIds.has(q.id) && 
+        !queueIds.has(q.id)
+      );
+      
+      // Shuffle available
+      const shuffled = [...available].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    };
+
+    const q1 = getQuestionsFromSource('PDF 1', 2);
+    const q2 = getQuestionsFromSource('PDF 2', 3);
+    const q3 = getQuestionsFromSource('PDF 3', 2);
+    const q4 = getQuestionsFromSource('PDF 4', 3);
+
+    const newQuestions = [...q1, ...q2, ...q3, ...q4];
+    
+    // Shuffle the 10 questions together
+    newQuestions.sort(() => Math.random() - 0.5);
+
+    newQuestions.forEach(q => {
+      this.gameState!.questionQueue.push(q.id);
+      queueIds.add(q.id);
+    });
+    
+    console.log(`PeerJS Host: Auto-filled queue with ${newQuestions.length} questions.`);
+  }
+
   startHost(initialState: GameState) {
     this.isHost = true;
     this.gameState = initialState;
+    this.fillQueueAutomatically();
     console.log('PeerJS: Started as Host');
   }
 
@@ -363,6 +401,14 @@ class PeerService {
           if (this.gameState.selectedAnswers[data.teamId] === undefined) {
             this.gameState.selectedAnswers[data.teamId] = data.answerIndex;
             
+            // Calculate time taken for bonus
+            if (this.gameState.timerEndTime) {
+              const now = Date.now();
+              const timeTaken = Math.max(0, (60000 - (this.gameState.timerEndTime - now)) / 1000);
+              if (!this.gameState.answerTimes) this.gameState.answerTimes = {};
+              this.gameState.answerTimes[data.teamId] = timeTaken;
+            }
+            
             const activeTeams = this.gameState.teams.filter(t => t.status !== 'eliminata');
             const answeredCount = Object.keys(this.gameState.selectedAnswers).length;
             
@@ -432,6 +478,7 @@ class PeerService {
         this.gameState.isQuestionActive = false;
         this.gameState.isQuestionFinished = false;
         this.gameState.selectedAnswers = {};
+        this.gameState.answerTimes = {};
         this.gameState.allTeamsAnswered = false;
         this.gameState.round = 1;
         this.gameState.showRoundWinner = false;
@@ -449,15 +496,24 @@ class PeerService {
           this.gameState.isQuestionFinished = false;
           this.gameState.buzzes = [];
           this.gameState.selectedAnswers = {};
+          this.gameState.answerTimes = {};
           this.gameState.allTeamsAnswered = false;
           this.updateCurrentQuestion(payload?.questionId);
           this.startCountdown('NEXT_QUESTION');
         } else {
-          const winner = [...this.gameState.teams].sort((a, b) => b.score - a.score)[0];
+          const winner = [...this.gameState.teams]
+            .filter(t => t.status !== 'eliminata')
+            .sort((a, b) => b.score - a.score)[0];
+          
           this.gameState.roundWinner = winner?.name || 'Nessuna';
           this.gameState.showRoundWinner = true;
           this.gameState.isQuestionActive = false;
           this.gameState.timerActive = false;
+
+          if (this.gameState.phase === 'FINAL' && winner) {
+            winner.status = 'vincitrice';
+            this.gameState.phase = 'FINISHED';
+          }
         }
         break;
       case 'START_NEXT_ROUND':
@@ -475,7 +531,12 @@ class PeerService {
         this.gameState.isQuestionFinished = false;
         this.gameState.buzzes = [];
         this.gameState.selectedAnswers = {};
+        this.gameState.answerTimes = {};
         this.gameState.allTeamsAnswered = false;
+        
+        // Auto-fill queue for the new round
+        this.fillQueueAutomatically();
+        
         this.updateCurrentQuestion(payload?.questionId);
         this.stopTimer();
         this.startCountdown('NEXT_QUESTION');
@@ -495,11 +556,6 @@ class PeerService {
         const team = this.gameState.teams.find(t => t.id === payload.teamId);
         if (team) {
           team.score += payload.amount;
-          if (this.gameState.phase === 'SEMIS' && this.gameState.semisMatches) {
-            this.updateMatchScore(payload.teamId, payload.amount);
-          } else if (this.gameState.phase === 'FINAL' && this.gameState.finalMatch) {
-            this.updateFinalScore(payload.teamId, payload.amount);
-          }
         }
         break;
       case 'START_SEMIS':
@@ -508,6 +564,16 @@ class PeerService {
         this.gameState.isQuestionActive = false;
         this.gameState.buzzes = [];
         this.gameState.allTeamsAnswered = false;
+        this.gameState.round = 1; // Reset round counter for display if needed
+        
+        // Reset scores for qualifiers
+        this.gameState.teams.forEach(t => {
+          if (t.status === 'in semifinale') {
+            t.score = 0;
+          }
+        });
+
+        this.fillQueueAutomatically();
         this.updateCurrentQuestion(payload?.questionId);
         this.stopTimer();
         this.startCountdown('NEXT_QUESTION');
@@ -518,6 +584,23 @@ class PeerService {
         this.gameState.isQuestionActive = false;
         this.gameState.buzzes = [];
         this.gameState.allTeamsAnswered = false;
+        this.gameState.round = 1;
+
+        // Pick top 2 from SEMIS
+        const semisSorted = [...this.gameState.teams]
+          .filter(t => t.status === 'in semifinale')
+          .sort((a, b) => b.score - a.score);
+        
+        semisSorted.forEach((t, i) => {
+          if (i < 2) {
+            t.status = 'in finale';
+            t.score = 0;
+          } else {
+            t.status = 'eliminata';
+          }
+        });
+
+        this.fillQueueAutomatically();
         this.updateCurrentQuestion(payload?.questionId);
         this.stopTimer();
         this.startCountdown('NEXT_QUESTION');
@@ -531,6 +614,7 @@ class PeerService {
         this.gameState.isQuestionFinished = false;
         this.gameState.teams.forEach(t => { t.score = 0; t.status = 'in gara'; });
         this.gameState.selectedAnswers = {};
+        this.gameState.answerTimes = {};
         this.gameState.allTeamsAnswered = false;
         this.gameState.buzzes = [];
         this.gameState.questionQueue = [];
@@ -654,11 +738,19 @@ class PeerService {
   private calculateScores() {
     if (!this.gameState || !this.gameState.currentQuestion || this.gameState.currentQuestion.correctAnswer === undefined || this.gameState.isQuestionFinished) return;
     const correctIdx = this.gameState.currentQuestion.correctAnswer;
+    const isQual = this.gameState.phase.startsWith('QUAL_');
+
     this.gameState.teams.forEach(team => {
       const selectedIdx = this.gameState!.selectedAnswers[team.id];
+      const timeTaken = this.gameState!.answerTimes?.[team.id] || 999;
+
       if (selectedIdx !== undefined) {
         if (selectedIdx === correctIdx) {
-          team.score += 10;
+          let points = 10;
+          if (isQual && timeTaken <= 3) {
+            points += 3;
+          }
+          team.score += points;
         } else {
           team.score = Math.max(0, team.score - 5);
         }
@@ -671,73 +763,15 @@ class PeerService {
     if (!this.gameState) return;
     const sorted = [...this.gameState.teams].sort((a, b) => b.score - a.score);
     sorted.forEach((team, index) => {
-      if (index < 4) team.status = 'qualificata';
-      else team.status = 'eliminata';
-    });
-    const qualifiers = sorted.slice(0, 4);
-    if (qualifiers.length >= 4) {
-      this.gameState.semisMatches = {
-        match1: { teamAId: qualifiers[0].id, teamBId: qualifiers[2].id, scoreA: 0, scoreB: 0 },
-        match2: { teamAId: qualifiers[1].id, teamBId: qualifiers[3].id, scoreA: 0, scoreB: 0 },
-      };
-      qualifiers.forEach(t => t.status = 'in semifinale');
-    }
-  }
-
-  private updateMatchScore(teamId: string, amount: number) {
-    if (!this.gameState || !this.gameState.semisMatches) return;
-    const { match1, match2 } = this.gameState.semisMatches;
-    [match1, match2].forEach(match => {
-      if (match.teamAId === teamId) match.scoreA += amount;
-      if (match.teamBId === teamId) match.scoreB += amount;
-      if (match.scoreA >= 10 && !match.winnerId) {
-        match.winnerId = match.teamAId;
-        const winner = this.gameState!.teams.find(t => t.id === match.teamAId);
-        const loser = this.gameState!.teams.find(t => t.id === match.teamBId);
-        if (winner) winner.status = 'in finale';
-        if (loser) loser.status = 'eliminata';
-        this.checkFinalReady();
-      }
-      if (match.scoreB >= 10 && !match.winnerId) {
-        match.winnerId = match.teamBId;
-        const winner = this.gameState!.teams.find(t => t.id === match.teamBId);
-        const loser = this.gameState!.teams.find(t => t.id === match.teamAId);
-        if (winner) winner.status = 'in finale';
-        if (loser) loser.status = 'eliminata';
-        this.checkFinalReady();
+      if (index < 4) {
+        team.status = 'in semifinale';
+      } else {
+        team.status = 'eliminata';
       }
     });
-  }
-
-  private checkFinalReady() {
-    if (!this.gameState) return;
-    if (this.gameState.semisMatches?.match1.winnerId && this.gameState.semisMatches?.match2.winnerId) {
-      this.gameState.finalMatch = {
-        teamAId: this.gameState.semisMatches.match1.winnerId,
-        teamBId: this.gameState.semisMatches.match2.winnerId,
-        scoreA: 0,
-        scoreB: 0
-      };
-    }
-  }
-
-  private updateFinalScore(teamId: string, amount: number) {
-    if (!this.gameState || !this.gameState.finalMatch) return;
-    const match = this.gameState.finalMatch;
-    if (match.teamAId === teamId) match.scoreA += amount;
-    if (match.teamBId === teamId) match.scoreB += amount;
-    if (match.scoreA >= 10 && !match.winnerId) {
-      match.winnerId = match.teamAId;
-      this.gameState.teams.find(t => t.id === match.teamAId)!.status = 'vincitrice';
-      this.gameState.teams.find(t => t.id === match.teamBId)!.status = 'eliminata';
-      this.gameState.phase = 'FINISHED';
-    }
-    if (match.scoreB >= 10 && !match.winnerId) {
-      match.winnerId = match.teamBId;
-      this.gameState.teams.find(t => t.id === match.teamBId)!.status = 'vincitrice';
-      this.gameState.teams.find(t => t.id === match.teamAId)!.status = 'eliminata';
-      this.gameState.phase = 'FINISHED';
-    }
+    // Clear match data as we're not using it anymore
+    this.gameState.semisMatches = null;
+    this.gameState.finalMatch = null;
   }
 
   private startTimer() {

@@ -18,6 +18,11 @@ export interface Question {
   source?: string; // Nome del file PDF o 'default'
 }
 
+export interface QuestionFolder {
+  name: string;
+  questions: Question[];
+}
+
 export interface GameState {
   phase: GamePhase;
   currentQuestionIndex: number;
@@ -27,6 +32,7 @@ export interface GameState {
   isQuestionFinished: boolean;
   teams: Team[];
   selectedAnswers: Record<string, number>; // teamId -> answerIndex
+  answerTimes: Record<string, number>; // teamId -> secondsTaken
   allTeamsAnswered: boolean;
   buzzes: { teamId: string; timestamp: number }[];
   timer: number;

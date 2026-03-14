@@ -611,6 +611,7 @@ export default function App() {
     isQuestionFinished: false,
     teams: [],
     selectedAnswers: {},
+    answerTimes: {},
     allTeamsAnswered: false,
     usedQuestionIds: [],
     buzzes: [],
@@ -1414,7 +1415,20 @@ export default function App() {
                   <div className="py-12 flex flex-col items-center gap-6">
                     {gameState.isQuestionFinished && gameState.currentQuestion && (
                        <div className="w-full max-w-md space-y-4">
-                          <div className="p-6 bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700 shadow-sm text-center">
+                          <div className="p-6 bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700 shadow-sm text-center relative overflow-hidden">
+                            {gameState.phase.startsWith('QUAL_') && 
+                             gameState.selectedAnswers[myTeam.id] === gameState.currentQuestion.correctAnswer && 
+                             gameState.answerTimes?.[myTeam.id] !== undefined &&
+                             gameState.answerTimes[myTeam.id] <= 3 && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                className="absolute top-2 right-2 bg-amber-500 text-zinc-950 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg z-20"
+                              >
+                                <Zap className="w-3 h-3" />
+                                BONUS VELOCITÀ +3
+                              </motion.div>
+                            )}
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">La tua risposta</p>
                             <p className="text-xl font-bold text-zinc-900 dark:text-white">
                               {gameState.selectedAnswers[myTeam.id] !== undefined 
@@ -1519,7 +1533,7 @@ export default function App() {
                 </div>
               )}
 
-              {gameState.isQuestionActive && (
+              {gameState.isQuestionActive && (gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && (
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1666,14 +1680,35 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
     
     // 1. Add Preloaded Questions
     PRELOADED_QUESTIONS.forEach(folder => {
-      acc[folder.name] = folder.questions.filter(q => 
+      let sourceName = folder.name;
+      // Normalizzazione: se contiene "PDF 1", "PDF 2", ecc. usa quel prefisso
+      const pdfMatch = sourceName.match(/PDF\s*(\d)/i);
+      if (pdfMatch) {
+        sourceName = `PDF ${pdfMatch[1]}`;
+      }
+      
+      if (!acc[sourceName]) acc[sourceName] = [];
+      
+      const filteredQs = folder.questions.filter(q => 
         q.text.toLowerCase().includes(searchQuery.toLowerCase())
       );
+      
+      filteredQs.forEach(q => {
+        if (!acc[sourceName].some(existing => existing.id === q.id)) {
+          acc[sourceName].push(q);
+        }
+      });
     });
 
     // 2. Add Questions from State (Uploaded/Manual)
     allQuestionsFlat.forEach(q => {
-      const source = q.source || 'Manuale';
+      let source = q.source || 'Manuale';
+      
+      const pdfMatch = source.match(/PDF\s*(\d)/i);
+      if (pdfMatch) {
+        source = `PDF ${pdfMatch[1]}`;
+      }
+
       if (!acc[source]) acc[source] = [];
       if (!acc[source].some(existing => existing.id === q.id)) {
         if (q.text.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -1765,7 +1800,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-              {gameState.phase.startsWith('QUAL_') && gameState.phase !== 'QUAL_RESULTS' && (
+              {(gameState.phase.startsWith('QUAL_') || gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && gameState.phase !== 'QUAL_RESULTS' && (
                 <>
                   <button onClick={() => sendAction('NEXT_QUESTION')} className="px-6 py-3 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)]">
                     Prossima Domanda
@@ -1839,6 +1874,17 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                   <option value="FINAL">Finale</option>
                 </select>
               </div>
+              <button 
+                onClick={() => {
+                  if (window.confirm('Sei sicuro di voler svuotare tutta la libreria domande (escluse quelle precaricate)?')) {
+                    sendAction('CLEAR_ALL_QUESTIONS', {});
+                  }
+                }}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-xl border border-zinc-200 transition-all shadow-sm"
+                title="Svuota Libreria"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -2116,7 +2162,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
               {/* Next Question Selector (Grouped by Source) - REMOVED DUPLICATE */}
 
               <div className="flex flex-wrap gap-4 pt-4 items-center">
-                {gameState.phase.startsWith('QUAL_') && gameState.phase !== 'QUAL_RESULTS' && (
+                {(gameState.phase.startsWith('QUAL_')) && (
                   <>
                     {gameState.showRoundWinner && (
                       <button onClick={() => sendAction('START_NEXT_ROUND')} className="px-8 py-4 bg-amber-500 text-zinc-950 font-black rounded-2xl hover:bg-amber-400 transition-all animate-bounce">
@@ -2130,8 +2176,8 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                     Avvia Semifinali
                   </button>
                 )}
-                {gameState.phase === 'SEMIS' && gameState.finalMatch && (
-                  <button onClick={() => sendAction('START_FINAL')} className="px-8 py-4 bg-purple-500 text-white font-black rounded-2xl hover:bg-purple-400 transition-all">
+                {gameState.phase === 'SEMIS' && gameState.showRoundWinner && (
+                  <button onClick={() => sendAction('START_FINAL')} className="px-8 py-4 bg-purple-500 text-white font-black rounded-2xl hover:bg-purple-400 transition-all animate-bounce">
                     Avvia Finale
                   </button>
                 )}
@@ -2166,36 +2212,22 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
               </section>
             )}
 
-            {/* Match Details */}
-            {(gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && (
-              <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 space-y-6">
-                <h3 className="text-xl font-bold text-zinc-950">Dettagli Scontri</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {gameState.phase === 'SEMIS' && gameState.semisMatches && (
-                    <>
-                      <MatchCard match={gameState.semisMatches.match1} teams={gameState.teams} onScore={(id, amt) => sendAction('UPDATE_SCORE', { teamId: id, amount: amt })} />
-                      <MatchCard match={gameState.semisMatches.match2} teams={gameState.teams} onScore={(id, amt) => sendAction('UPDATE_SCORE', { teamId: id, amount: amt })} />
-                    </>
-                  )}
-                  {gameState.phase === 'FINAL' && gameState.finalMatch && (
-                    <div className="md:col-span-2">
-                      <MatchCard match={gameState.finalMatch} teams={gameState.teams} onScore={(id, amt) => sendAction('UPDATE_SCORE', { teamId: id, amount: amt })} />
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-          </div>
-
-          {/* Teams List */}
-          <div className="space-y-8">
+            {/* Teams List */}
+            <div className="space-y-8">
             <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-8 space-y-6">
               <h3 className="text-xl font-bold flex items-center gap-2 text-zinc-950">
                 <Users className="w-5 h-5 text-emerald-500" />
                 Squadre
               </h3>
               <div className="space-y-4">
-                {[...gameState.teams].sort((a, b) => b.score - a.score).map(team => (
+                {[...gameState.teams]
+                  .filter(t => {
+                    if (gameState.phase === 'SEMIS') return t.status === 'in semifinale';
+                    if (gameState.phase === 'FINAL') return t.status === 'in finale' || t.status === 'vincitrice';
+                    return true;
+                  })
+                  .sort((a, b) => b.score - a.score)
+                  .map(team => (
                   <div key={team.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
@@ -2221,57 +2253,31 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
           </div>
         </div>
       </div>
-
-      <ManualEntryModal 
-        isOpen={showManualEntry}
-        onClose={() => setShowManualEntry(false)}
-        onImport={(questions) => {
-          sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions, fileName: `Manuale_${new Date().toLocaleTimeString()}` });
-          alert(`Caricate ${questions.length} domande manualmente nella fase ${uploadPhase}!`);
-        }}
-        currentPhase={uploadPhase}
-      />
     </div>
-  );
+
+    <ManualEntryModal 
+      isOpen={showManualEntry}
+      onClose={() => setShowManualEntry(false)}
+      onImport={(questions) => {
+        sendAction('ADD_QUESTIONS', { phase: uploadPhase, questions, fileName: `Manuale_${new Date().toLocaleTimeString()}` });
+        alert(`Caricate ${questions.length} domande manualmente nella fase ${uploadPhase}!`);
+      }}
+      currentPhase={uploadPhase}
+    />
+  </div>
+);
 }
 
-function MatchCard({ match, teams, onScore }: { match: any, teams: Team[], onScore: (id: string, amt: number) => void }) {
-  const teamA = teams.find(t => t.id === match.teamAId);
-  const teamB = teams.find(t => t.id === match.teamBId);
-
-  return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-6">
-      <div className="flex justify-between items-center gap-4">
-        <div className="flex-1 text-center space-y-2">
-          <p className="font-bold truncate text-zinc-950">{teamA?.name}</p>
-          <p className="text-4xl font-black text-emerald-500">{match.scoreA}</p>
-          <div className="flex gap-1 justify-center">
-            <button onClick={() => onScore(match.teamAId, 1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-emerald-500 hover:text-zinc-950 transition-all">+</button>
-            <button onClick={() => onScore(match.teamAId, -1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-red-500 hover:text-white transition-all">-</button>
-          </div>
-        </div>
-        <div className="text-zinc-300 font-black italic">VS</div>
-        <div className="flex-1 text-center space-y-2">
-          <p className="font-bold truncate text-zinc-950">{teamB?.name}</p>
-          <p className="text-4xl font-black text-emerald-500">{match.scoreB}</p>
-          <div className="flex gap-1 justify-center">
-            <button onClick={() => onScore(match.teamBId, 1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-emerald-500 hover:text-zinc-950 transition-all">+</button>
-            <button onClick={() => onScore(match.teamBId, -1)} className="w-8 h-8 bg-zinc-50 rounded-lg text-xs font-bold border border-zinc-200 text-zinc-500 hover:bg-red-500 hover:text-white transition-all">-</button>
-          </div>
-        </div>
-      </div>
-      {match.winnerId && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center">
-          <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Vincitore</p>
-          <p className="font-black text-zinc-950">{teams.find(t => t.id === match.winnerId)?.name}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId, theme, toggleTheme, isAdmin, roomId, leaderboardMusicRef }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void, isAdmin: boolean, roomId: string, leaderboardMusicRef: React.RefObject<HTMLAudioElement> }) {
-  const sortedTeams = [...gameState.teams].sort((a, b) => b.score - a.score);
+function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId, theme, toggleTheme, isAdmin, roomId, leaderboardMusicRef }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void, isAdmin: boolean, roomId: string, leaderboardMusicRef: React.RefObject<any> }) {
+  const sortedTeams = useMemo(() => {
+    let teams = [...gameState.teams];
+    if (gameState.phase === 'SEMIS') {
+      teams = teams.filter(t => t.status === 'in semifinale');
+    } else if (gameState.phase === 'FINAL') {
+      teams = teams.filter(t => t.status === 'in finale' || t.status === 'vincitrice');
+    }
+    return teams.sort((a, b) => b.score - a.score);
+  }, [gameState.teams, gameState.phase]);
 
   const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
                     gameState.phase === 'QUAL_2' ? 'Cultura Generale' : 
@@ -2545,6 +2551,20 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 dark:text-white leading-[1.1] tracking-tighter">
                     {gameState.currentQuestion.text}
                   </h3>
+
+                  {gameState.buzzes.length > 0 && (
+                    <motion.div 
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="bg-amber-500 text-zinc-950 p-6 rounded-3xl shadow-[0_0_40px_rgba(245,158,11,0.3)] border-4 border-amber-400 text-center space-y-2"
+                    >
+                      <p className="text-xs font-black uppercase tracking-[0.3em] opacity-70">Prenotazione effettuata!</p>
+                      <p className="text-3xl sm:text-5xl font-black uppercase tracking-tighter">
+                        {gameState.teams.find(t => t.id === gameState.buzzes[0].teamId)?.name}
+                      </p>
+                      <p className="text-lg font-bold">ha prenotato la risposta</p>
+                    </motion.div>
+                  )}
 
                   {gameState.currentQuestion.options && (
                     <div className="grid grid-cols-1 gap-3 mt-8">
