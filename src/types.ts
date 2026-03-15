@@ -7,7 +7,7 @@ export interface Team {
   status: TeamStatus;
 }
 
-export type GamePhase = 'LOBBY' | 'QUAL_1' | 'QUAL_2' | 'QUAL_3' | 'QUAL_RESULTS' | 'SEMIS' | 'FINAL' | 'FINISHED';
+export type GamePhase = 'LOBBY' | 'QUAL_1' | 'QUAL_2' | 'QUAL_3' | 'QUAL_RESULTS' | 'SEMIS_1' | 'SEMIS_2' | 'FINAL' | 'FINISHED';
 
 export interface Question {
   id: string;

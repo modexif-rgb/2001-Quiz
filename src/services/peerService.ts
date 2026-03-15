@@ -284,22 +284,29 @@ class PeerService {
       return shuffled.slice(0, count);
     };
 
-    const q1 = getQuestionsFromSource('PDF 1', 2);
-    const q2 = getQuestionsFromSource('PDF 2', 3);
-    const q3 = getQuestionsFromSource('PDF 3', 2);
-    const q4 = getQuestionsFromSource('PDF 4', 3);
-
-    const newQuestions = [...q1, ...q2, ...q3, ...q4];
-    
-    // Shuffle the 10 questions together
-    newQuestions.sort(() => Math.random() - 0.5);
+    let newQuestions: Question[] = [];
+    if (this.gameState.phase === 'QUAL_1') {
+      newQuestions = getQuestionsFromSource('Quiz_CulturaGenerale', 10);
+    } else if (this.gameState.phase === 'QUAL_2') {
+      newQuestions = getQuestionsFromSource('Quiz_Arti', 10);
+    } else if (this.gameState.phase === 'QUAL_3') {
+      newQuestions = getQuestionsFromSource('Quiz_Storia_Geopolitica', 10);
+    } else {
+      // Fallback for other phases
+      const q1 = getQuestionsFromSource('Quiz_CulturaGenerale', 2);
+      const q2 = getQuestionsFromSource('Quiz_Arti', 3);
+      const q3 = getQuestionsFromSource('Quiz_Storia_Geopolitica', 2);
+      const q4 = getQuestionsFromSource('PDF 4', 3);
+      newQuestions = [...q1, ...q2, ...q3, ...q4];
+      newQuestions.sort(() => Math.random() - 0.5);
+    }
 
     newQuestions.forEach(q => {
       this.gameState!.questionQueue.push(q.id);
       queueIds.add(q.id);
     });
     
-    console.log(`PeerJS Host: Auto-filled queue with ${newQuestions.length} questions.`);
+    console.log(`PeerJS Host: Auto-filled queue with ${newQuestions.length} questions for phase ${this.gameState.phase}.`);
   }
 
   startHost(initialState: GameState) {
@@ -387,13 +394,81 @@ class PeerService {
         break;
 
       case 'BUZZ':
-        if (this.gameState.isQuestionActive && (this.gameState.phase === 'SEMIS' || this.gameState.phase === 'FINAL')) {
-          const alreadyBuzzed = this.gameState.buzzes.find(b => b.teamId === data.teamId);
+        if (this.gameState.isQuestionActive && !this.gameState.isQuestionFinished) {
+          const alreadyBuzzed = this.gameState.buzzes.some(b => b.teamId === data.teamId);
           if (!alreadyBuzzed) {
+            const isFirstBuzz = this.gameState.buzzes.length === 0;
             this.gameState.buzzes.push({ teamId: data.teamId, timestamp: Date.now() });
+            
+            // If it's the first buzz in SEMIS or FINAL, start the 3-second response timer
+            if (isFirstBuzz && (this.gameState.phase.startsWith('SEMIS_') || this.gameState.phase === 'FINAL')) {
+              this.stopTimer();
+              this.gameState.timer = 3;
+              this.gameState.timerActive = true;
+              this.gameState.timerEndTime = Date.now() + 3000;
+            }
+            
             this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
           }
         }
+        break;
+      case 'CORRECT_BUZZ':
+        if (this.gameState.buzzes.length > 0) {
+          const winningTeamId = this.gameState.buzzes[0].teamId;
+          const team = this.gameState.teams.find(t => t.id === winningTeamId);
+          if (team) {
+            team.score += 10;
+            
+            // Update match scores
+            if (this.gameState.phase === 'SEMIS_1' && this.gameState.semisMatches) {
+              if (this.gameState.semisMatches.match1.teamAId === winningTeamId) this.gameState.semisMatches.match1.scoreA += 10;
+              else this.gameState.semisMatches.match1.scoreB += 10;
+            } else if (this.gameState.phase === 'SEMIS_2' && this.gameState.semisMatches) {
+              if (this.gameState.semisMatches.match2.teamAId === winningTeamId) this.gameState.semisMatches.match2.scoreA += 10;
+              else this.gameState.semisMatches.match2.scoreB += 10;
+            } else if (this.gameState.phase === 'FINAL' && this.gameState.finalMatch) {
+              if (this.gameState.finalMatch.teamAId === winningTeamId) this.gameState.finalMatch.scoreA += 10;
+              else this.gameState.finalMatch.scoreB += 10;
+            }
+
+            // Check for victory (50 points)
+            if (team.score >= 50) {
+              this.gameState.showRoundWinner = true;
+              this.gameState.roundWinner = team.name;
+              this.gameState.isQuestionActive = false;
+            } else {
+              this.nextQuestion();
+            }
+          }
+        }
+        break;
+      case 'INCORRECT_BUZZ':
+        if (this.gameState.buzzes.length > 0) {
+          const losingTeamId = this.gameState.buzzes[0].teamId;
+          const team = this.gameState.teams.find(t => t.id === losingTeamId);
+          if (team) {
+            team.score = Math.max(0, team.score - 5);
+            
+            // Update match scores
+            if (this.gameState.phase === 'SEMIS_1' && this.gameState.semisMatches) {
+              if (this.gameState.semisMatches.match1.teamAId === losingTeamId) this.gameState.semisMatches.match1.scoreA = Math.max(0, this.gameState.semisMatches.match1.scoreA - 5);
+              else this.gameState.semisMatches.match1.scoreB = Math.max(0, this.gameState.semisMatches.match1.scoreB - 5);
+            } else if (this.gameState.phase === 'SEMIS_2' && this.gameState.semisMatches) {
+              if (this.gameState.semisMatches.match2.teamAId === losingTeamId) this.gameState.semisMatches.match2.scoreA = Math.max(0, this.gameState.semisMatches.match2.scoreA - 5);
+              else this.gameState.semisMatches.match2.scoreB = Math.max(0, this.gameState.semisMatches.match2.scoreB - 5);
+            } else if (this.gameState.phase === 'FINAL' && this.gameState.finalMatch) {
+              if (this.gameState.finalMatch.teamAId === losingTeamId) this.gameState.finalMatch.scoreA = Math.max(0, this.gameState.finalMatch.scoreA - 5);
+              else this.gameState.finalMatch.scoreB = Math.max(0, this.gameState.finalMatch.scoreB - 5);
+            }
+          }
+          this.nextQuestion();
+        }
+        break;
+      case 'CLEAR_BUZZES':
+      case 'RESET_BUZZES':
+        this.gameState.buzzes = [];
+        this.stopTimer();
+        this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
         break;
 
       case 'SUBMIT_ANSWER':
@@ -518,12 +593,15 @@ class PeerService {
         break;
       case 'START_NEXT_ROUND':
         this.gameState.showRoundWinner = false;
-        if (this.gameState.phase === 'QUAL_1') this.gameState.phase = 'QUAL_2';
-        else if (this.gameState.phase === 'QUAL_2') this.gameState.phase = 'QUAL_3';
-        else if (this.gameState.phase === 'QUAL_3') {
+        if (this.gameState.phase === 'QUAL_1') {
+          this.gameState.phase = 'QUAL_2';
+        } else if (this.gameState.phase === 'QUAL_2') {
+          this.gameState.phase = 'QUAL_3';
+        } else if (this.gameState.phase === 'QUAL_3') {
           this.gameState.phase = 'QUAL_RESULTS';
           this.calculateQualifiers();
-          break;
+          this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
+          return;
         }
         this.gameState.round++;
         this.gameState.currentQuestionIndex = 1;
@@ -559,19 +637,66 @@ class PeerService {
         }
         break;
       case 'START_SEMIS':
-        this.gameState.phase = 'SEMIS';
+        this.gameState.phase = 'SEMIS_1';
         this.gameState.currentQuestionIndex = 1;
         this.gameState.isQuestionActive = false;
         this.gameState.buzzes = [];
         this.gameState.allTeamsAnswered = false;
-        this.gameState.round = 1; // Reset round counter for display if needed
+        this.gameState.round = 1;
+        
+        // Pick top 4 and set up matches
+        const sorted = [...this.gameState.teams].sort((a, b) => b.score - a.score);
+        const qualifiers = sorted.slice(0, 4);
         
         // Reset scores for qualifiers
         this.gameState.teams.forEach(t => {
-          if (t.status === 'in semifinale') {
+          if (qualifiers.some(q => q.id === t.id)) {
+            t.status = 'in semifinale';
             t.score = 0;
+          } else {
+            t.status = 'eliminata';
           }
         });
+
+        // Match 1: 1st vs 3rd
+        // Match 2: 2nd vs 4th
+        this.gameState.semisMatches = {
+          match1: {
+            teamAId: qualifiers[0].id,
+            teamBId: qualifiers[2].id,
+            scoreA: 0,
+            scoreB: 0
+          },
+          match2: {
+            teamAId: qualifiers[1].id,
+            teamBId: qualifiers[3].id,
+            scoreA: 0,
+            scoreB: 0
+          }
+        };
+
+        this.fillQueueAutomatically();
+        this.updateCurrentQuestion(payload?.questionId);
+        this.stopTimer();
+        this.startCountdown('NEXT_QUESTION');
+        break;
+      case 'START_SEMIS_2':
+        this.gameState.phase = 'SEMIS_2';
+        this.gameState.currentQuestionIndex = 1;
+        this.gameState.isQuestionActive = false;
+        this.gameState.buzzes = [];
+        this.gameState.allTeamsAnswered = false;
+        this.gameState.round = 1;
+        
+        // Reset scores for teams in match 2
+        if (this.gameState.semisMatches) {
+          const m2 = this.gameState.semisMatches.match2;
+          this.gameState.teams.forEach(t => {
+            if (t.id === m2.teamAId || t.id === m2.teamBId) {
+              t.score = 0;
+            }
+          });
+        }
 
         this.fillQueueAutomatically();
         this.updateCurrentQuestion(payload?.questionId);
@@ -586,19 +711,30 @@ class PeerService {
         this.gameState.allTeamsAnswered = false;
         this.gameState.round = 1;
 
-        // Pick top 2 from SEMIS
-        const semisSorted = [...this.gameState.teams]
-          .filter(t => t.status === 'in semifinale')
-          .sort((a, b) => b.score - a.score);
-        
-        semisSorted.forEach((t, i) => {
-          if (i < 2) {
-            t.status = 'in finale';
-            t.score = 0;
-          } else {
-            t.status = 'eliminata';
-          }
-        });
+        // Winners of SEMIS_1 and SEMIS_2
+        if (this.gameState.semisMatches) {
+          const m1 = this.gameState.semisMatches.match1;
+          const m2 = this.gameState.semisMatches.match2;
+          
+          const winner1Id = m1.scoreA >= 50 ? m1.teamAId : m1.teamBId;
+          const winner2Id = m2.scoreA >= 50 ? m2.teamAId : m2.teamBId;
+
+          this.gameState.teams.forEach(t => {
+            if (t.id === winner1Id || t.id === winner2Id) {
+              t.status = 'in finale';
+              t.score = 0;
+            } else if (t.status === 'in semifinale') {
+              t.status = 'eliminata';
+            }
+          });
+
+          this.gameState.finalMatch = {
+            teamAId: winner1Id,
+            teamBId: winner2Id,
+            scoreA: 0,
+            scoreB: 0
+          };
+        }
 
         this.fillQueueAutomatically();
         this.updateCurrentQuestion(payload?.questionId);
@@ -735,6 +871,19 @@ class PeerService {
     }
   }
 
+  private nextQuestion() {
+    if (!this.gameState) return;
+    this.gameState.currentQuestionIndex++;
+    this.gameState.isQuestionActive = false;
+    this.gameState.isQuestionFinished = false;
+    this.gameState.buzzes = [];
+    this.gameState.selectedAnswers = {};
+    this.gameState.answerTimes = {};
+    this.updateCurrentQuestion();
+    this.stopTimer();
+    this.startCountdown('NEXT_QUESTION');
+  }
+
   private calculateScores() {
     if (!this.gameState || !this.gameState.currentQuestion || this.gameState.currentQuestion.correctAnswer === undefined || this.gameState.isQuestionFinished) return;
     const correctIdx = this.gameState.currentQuestion.correctAnswer;
@@ -796,6 +945,13 @@ class PeerService {
         
         if (this.gameState.timer <= 0) {
           this.stopTimer();
+          
+          // If timer was for a buzz in SEMIS/FINAL, it's an automatic incorrect
+          if (this.gameState.buzzes.length > 0 && (this.gameState.phase.startsWith('SEMIS_') || this.gameState.phase === 'FINAL')) {
+            this.handleHostMessage(null as any, { type: 'INCORRECT_BUZZ' });
+            return;
+          }
+
           this.gameState.isQuestionActive = false;
           this.gameState.isQuestionFinished = true;
           this.calculateScores();
@@ -858,7 +1014,7 @@ class PeerService {
     this.gameState.countdownType = undefined;
 
     if (type === 'NEXT_QUESTION' || type === 'GAME_START') {
-      const phasesWithQuestions = ['QUAL_1', 'QUAL_2', 'QUAL_3', 'SEMIS', 'FINAL'];
+      const phasesWithQuestions = ['QUAL_1', 'QUAL_2', 'QUAL_3', 'SEMIS_1', 'SEMIS_2', 'FINAL'];
       if (phasesWithQuestions.includes(this.gameState.phase)) {
         this.gameState.isQuestionFinished = false;
         this.gameState.isQuestionActive = true;

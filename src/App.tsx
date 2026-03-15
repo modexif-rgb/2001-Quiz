@@ -438,7 +438,7 @@ export default function App() {
 
   // Update music source when it changes in gameState
   useEffect(() => {
-    if (gameState?.leaderboardMusicUrl && leaderboardMusicRef.current) {
+    if (gameState?.leaderboardMusicUrl && gameState.leaderboardMusicUrl !== 'DATA_URL_SYNCED' && leaderboardMusicRef.current) {
       if (lastLoadedMusicUrl.current !== gameState.leaderboardMusicUrl) {
         console.log("Loading new leaderboard music...");
         leaderboardMusicRef.current.src = gameState.leaderboardMusicUrl;
@@ -1327,7 +1327,8 @@ export default function App() {
               <div className="text-center space-y-2">
                 <span className="text-xs font-bold text-emerald-500 uppercase tracking-[0.2em]">
                   Round {gameState.round} | {gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
-                   gameState.phase === 'QUAL_2' ? 'Arti' : 'Mista'}
+                   gameState.phase === 'QUAL_2' ? 'Arti' : 
+                   gameState.phase === 'QUAL_3' ? 'Storia e Geopolitica' : 'Qualificazioni'}
                 </span>
                 <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}/10</h2>
               </div>
@@ -1473,7 +1474,7 @@ export default function App() {
                     <CheckCircle2 className="w-16 h-16 text-emerald-500" />
                   </div>
                   <h1 className="text-5xl font-black text-zinc-950">QUALIFICATI!</h1>
-                  <p className="text-zinc-600 text-xl">Ottimo lavoro, siete tra le migliori 4 squadre!</p>
+                  <p className="text-zinc-600 text-xl font-bold">Complimenti! Hai passato il turno</p>
                 </>
               ) : (
                 <>
@@ -1481,13 +1482,13 @@ export default function App() {
                     <XCircle className="w-16 h-16 text-zinc-400" />
                   </div>
                   <h1 className="text-5xl font-black text-zinc-400">FINE CORSA</h1>
-                  <p className="text-zinc-500 text-xl">Il vostro percorso si ferma qui... ma ottima partita!</p>
+                  <p className="text-zinc-500 text-xl font-bold">Il tuo percorso si chiude qua</p>
                 </>
               )}
             </motion.div>
           )}
 
-          {(gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && (
+          {(gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL') && (
             <motion.div 
               key="buzz-phase"
               initial={{ opacity: 0 }}
@@ -1533,7 +1534,7 @@ export default function App() {
                 </div>
               )}
 
-              {gameState.isQuestionActive && (gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && (
+              {gameState.isQuestionActive && (gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL') && (
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1800,7 +1801,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-              {(gameState.phase.startsWith('QUAL_') || gameState.phase === 'SEMIS' || gameState.phase === 'FINAL') && gameState.phase !== 'QUAL_RESULTS' && (
+              {(gameState.phase.startsWith('QUAL_') || gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL') && gameState.phase !== 'QUAL_RESULTS' && (
                 <>
                   <button onClick={() => sendAction('NEXT_QUESTION')} className="px-6 py-3 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)]">
                     Prossima Domanda
@@ -2173,10 +2174,15 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                 )}
                 {gameState.phase === 'QUAL_RESULTS' && (
                   <button onClick={() => sendAction('START_SEMIS')} className="px-8 py-4 bg-amber-500 text-zinc-950 font-black rounded-2xl hover:bg-amber-400 transition-all">
-                    Avvia Semifinali
+                    Avvia Semifinale 1
                   </button>
                 )}
-                {gameState.phase === 'SEMIS' && gameState.showRoundWinner && (
+                {gameState.phase === 'SEMIS_1' && gameState.showRoundWinner && (
+                  <button onClick={() => sendAction('START_SEMIS_2')} className="px-8 py-4 bg-amber-500 text-zinc-950 font-black rounded-2xl hover:bg-amber-400 transition-all">
+                    Avvia Semifinale 2
+                  </button>
+                )}
+                {gameState.phase === 'SEMIS_2' && gameState.showRoundWinner && (
                   <button onClick={() => sendAction('START_FINAL')} className="px-8 py-4 bg-purple-500 text-white font-black rounded-2xl hover:bg-purple-400 transition-all animate-bounce">
                     Avvia Finale
                   </button>
@@ -2205,7 +2211,25 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                         </span>
                         <span className="font-bold text-lg text-zinc-950">{gameState.teams.find(t => t.id === buzz.teamId)?.name}</span>
                       </div>
-                      <span className="text-xs font-mono text-zinc-400">+{((buzz.timestamp - gameState.buzzes[0].timestamp) / 1000).toFixed(3)}s</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-xs font-mono text-zinc-400">+{((buzz.timestamp - gameState.buzzes[0].timestamp) / 1000).toFixed(3)}s</span>
+                        {i === 0 && (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => sendAction('CORRECT_BUZZ')}
+                              className="px-3 py-1 bg-emerald-500 text-zinc-950 text-[10px] font-black rounded-lg hover:bg-emerald-400 uppercase"
+                            >
+                              Corretto (+10)
+                            </button>
+                            <button 
+                              onClick={() => sendAction('INCORRECT_BUZZ')}
+                              className="px-3 py-1 bg-red-500 text-white text-[10px] font-black rounded-lg hover:bg-red-400 uppercase"
+                            >
+                              Errato (-5)
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2222,7 +2246,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
               <div className="space-y-4">
                 {[...gameState.teams]
                   .filter(t => {
-                    if (gameState.phase === 'SEMIS') return t.status === 'in semifinale';
+                    if (gameState.phase.startsWith('SEMIS_')) return t.status === 'in semifinale';
                     if (gameState.phase === 'FINAL') return t.status === 'in finale' || t.status === 'vincitrice';
                     return true;
                   })
@@ -2271,18 +2295,33 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
 function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPeerId, theme, toggleTheme, isAdmin, roomId, leaderboardMusicRef }: { gameState: GameState, audioEnabled: boolean, playSyntheticSound: (type: 'beep' | 'siren' | 'countdown' | 'start' | 'finish' | 'buzz') => void, onBack: () => void, myPeerId: string | null, theme: 'light' | 'dark', toggleTheme: () => void, isAdmin: boolean, roomId: string, leaderboardMusicRef: React.RefObject<any> }) {
   const sortedTeams = useMemo(() => {
     let teams = [...gameState.teams];
-    if (gameState.phase === 'SEMIS') {
-      teams = teams.filter(t => t.status === 'in semifinale');
+    if (gameState.phase.startsWith('QUAL_')) {
+      // Show all teams during all qualification rounds
+    } else if (gameState.phase === 'SEMIS_1') {
+      if (gameState.semisMatches) {
+        const m1 = gameState.semisMatches.match1;
+        teams = teams.filter(t => t.id === m1.teamAId || t.id === m1.teamBId);
+      } else {
+        teams = teams.filter(t => t.status === 'in semifinale');
+      }
+    } else if (gameState.phase === 'SEMIS_2') {
+      if (gameState.semisMatches) {
+        const m2 = gameState.semisMatches.match2;
+        teams = teams.filter(t => t.id === m2.teamAId || t.id === m2.teamBId);
+      } else {
+        teams = teams.filter(t => t.status === 'in semifinale');
+      }
     } else if (gameState.phase === 'FINAL') {
       teams = teams.filter(t => t.status === 'in finale' || t.status === 'vincitrice');
     }
     return teams.sort((a, b) => b.score - a.score);
-  }, [gameState.teams, gameState.phase]);
+  }, [gameState.teams, gameState.phase, gameState.semisMatches]);
 
   const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
-                    gameState.phase === 'QUAL_2' ? 'Cultura Generale' : 
-                    gameState.phase === 'QUAL_3' ? 'Cultura Generale' : 
-                    gameState.phase === 'SEMIS' ? 'Semifinali' : 
+                    gameState.phase === 'QUAL_2' ? 'Arti' : 
+                    gameState.phase === 'QUAL_3' ? 'Storia e Geopolitica' : 
+                    gameState.phase === 'SEMIS_1' ? 'Semifinale 1' : 
+                    gameState.phase === 'SEMIS_2' ? 'Semifinale 2' : 
                     gameState.phase === 'FINAL' ? 'Finale' : 'Gara';
 
   return (
@@ -2469,7 +2508,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         </div>
         
         <div className="space-y-4">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 uppercase">Classifica Real-Time</h1>
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 uppercase">
+            {gameState.phase.startsWith('QUAL_') ? 'Qualificazioni' : 'Classifica Real-Time'}
+          </h1>
           {(isAdmin ? myPeerId : roomId) && (
             <div className="flex flex-wrap items-center justify-center gap-3 mx-auto w-fit">
               <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">

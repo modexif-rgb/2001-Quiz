@@ -1,21 +1,21 @@
 import { QuestionFolder } from '../types';
-import { pdf1Questions } from './pdf1';
-import { pdf2Questions } from './pdf2';
-import { pdf3Questions } from './pdf3';
+import { culturaGeneraleQuestions } from './culturaGenerale';
+import { artiQuestions } from './arti';
+import { storiaGeopoliticaQuestions } from './storiaGeopolitica';
 import { pdf4Questions } from './pdf4';
 
 export const PRELOADED_QUESTIONS: QuestionFolder[] = [
   {
-    name: "PDF 1",
-    questions: pdf1Questions
+    name: "Quiz_CulturaGenerale",
+    questions: culturaGeneraleQuestions
   },
   {
-    name: "PDF 2",
-    questions: pdf2Questions
+    name: "Quiz_Arti",
+    questions: artiQuestions
   },
   {
-    name: "PDF 3",
-    questions: pdf3Questions
+    name: "Quiz_Storia_Geopolitica",
+    questions: storiaGeopoliticaQuestions
   },
   {
     name: "PDF 4",
