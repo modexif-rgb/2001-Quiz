@@ -960,7 +960,6 @@ class PeerService {
           }
 
           this.gameState.isQuestionActive = false;
-          this.gameState.isQuestionFinished = true;
           this.calculateScores();
           if (this.gameState.currentQuestionIndex === 10 && this.gameState.phase.startsWith('QUAL_')) {
             const winner = [...this.gameState.teams].sort((a, b) => b.score - a.score)[0];

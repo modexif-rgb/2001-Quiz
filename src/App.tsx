@@ -636,7 +636,7 @@ export default function App() {
       SEMIS: [],
       FINAL: [],
     }),
-    leaderboardMusicUrl: '',
+    leaderboardMusicUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     semisMatches: null,
     finalMatch: null,
   });
