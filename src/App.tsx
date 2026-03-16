@@ -1343,6 +1343,17 @@ export default function App() {
                         </div>
                         <p className="text-3xl font-black text-emerald-500 uppercase tracking-tighter text-center">In attesa della prossima domanda... Preparatevi!</p>
                         
+                        {gameState.answerTimes[myTeam.id] <= 5 && (
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="flex items-center gap-2 bg-amber-500 text-zinc-950 px-4 py-2 rounded-full font-black text-sm uppercase tracking-widest shadow-lg"
+                          >
+                            <Zap className="w-4 h-4 fill-current" />
+                            Risposta Veloce! (+3 punti)
+                          </motion.div>
+                        )}
+
                         <div className="w-full max-w-md space-y-4">
                           <div className="p-6 bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">La tua risposta</p>
@@ -1493,7 +1504,7 @@ export default function App() {
               key="buzz-phase"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="w-full flex flex-col items-center gap-8"
+              className="w-full flex flex-col items-center gap-4 sm:gap-8"
             >
               <div className="text-center space-y-2">
                 <span className="text-xs font-bold text-amber-500 uppercase tracking-[0.2em]">
@@ -1503,22 +1514,22 @@ export default function App() {
               </div>
 
               {gameState.isQuestionActive && gameState.currentQuestion ? (
-                <div className="w-full space-y-8">
-                  <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center w-full shadow-2xl">
-                    <p className="text-3xl font-bold text-zinc-950 dark:text-white leading-tight">{gameState.currentQuestion.text}</p>
+                <div className="w-full space-y-4 sm:space-y-8">
+                  <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-8 text-center w-full shadow-2xl">
+                    <p className="text-xl sm:text-3xl font-bold text-zinc-950 dark:text-white leading-tight">{gameState.currentQuestion.text}</p>
                   </div>
 
                   {gameState.currentQuestion.options && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
                       {gameState.currentQuestion.options.map((option, idx) => (
                         <div 
                           key={idx} 
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 text-left flex items-center gap-4 opacity-50 cursor-not-allowed group"
+                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 sm:p-6 text-left flex items-center gap-2 sm:gap-4 opacity-50 cursor-not-allowed group"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-zinc-400">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-zinc-400 text-xs sm:text-base">
                             {String.fromCharCode(65 + idx)}
                           </div>
-                          <span className="text-zinc-500 font-bold">{option}</span>
+                          <span className="text-zinc-500 font-bold text-xs sm:text-base line-clamp-2">{option}</span>
                         </div>
                       ))}
                     </div>
@@ -1541,10 +1552,10 @@ export default function App() {
                   onClick={handleBuzz}
                   disabled={gameState.buzzes.some(b => b.teamId === myTeam?.id)}
                   className={cn(
-                    "w-48 h-48 sm:w-64 sm:h-64 rounded-full border-8 flex flex-col items-center justify-center gap-2 transition-all shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden",
+                    "w-32 h-32 sm:w-48 sm:h-48 rounded-full border-4 sm:border-8 flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all shadow-[0_0_30px_rgba(245,158,11,0.2)] relative overflow-hidden",
                     gameState.buzzes.some(b => b.teamId === myTeam?.id)
                       ? "bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed shadow-none"
-                      : "bg-amber-500 border-amber-400 text-zinc-950 hover:bg-amber-400 hover:shadow-[0_0_80px_rgba(245,158,11,0.4)] active:scale-90"
+                      : "bg-amber-500 border-amber-400 text-zinc-950 hover:bg-amber-400 hover:shadow-[0_0_60px_rgba(245,158,11,0.4)] active:scale-90"
                   )}
                 >
                   {!gameState.buzzes.some(b => b.teamId === myTeam?.id) && (
@@ -1557,8 +1568,8 @@ export default function App() {
                       className="absolute inset-0 bg-white rounded-full"
                     />
                   )}
-                  <Zap className={cn("w-16 h-16 sm:w-24 sm:h-24 relative z-10", !gameState.buzzes.some(b => b.teamId === myTeam?.id) && "animate-pulse")} />
-                  <span className="text-xl sm:text-2xl font-black uppercase tracking-tighter relative z-10">BUZZ</span>
+                  <Zap className={cn("w-10 h-10 sm:w-16 sm:h-16 relative z-10", !gameState.buzzes.some(b => b.teamId === myTeam?.id) && "animate-pulse")} />
+                  <span className="text-sm sm:text-xl font-black uppercase tracking-tighter relative z-10">BUZZ</span>
                 </motion.button>
               )}
               
@@ -2717,10 +2728,20 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   
                   <div>
                     <h3 className={cn(
-                      "text-2xl font-black tracking-tight",
+                      "text-2xl font-black tracking-tight flex items-center gap-2",
                       isFirst ? "text-amber-600 dark:text-amber-500" : "text-zinc-950 dark:text-white"
                     )}>
                       {team.name}
+                      {team.lastAnswerFast && (
+                        <motion.span
+                          initial={{ scale: 0, rotate: -45 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          className="text-amber-500"
+                          title="Risposta Veloce! (+3 punti)"
+                        >
+                          <Zap className="w-5 h-5 fill-current" />
+                        </motion.span>
+                      )}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                       <div className={cn(

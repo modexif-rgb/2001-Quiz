@@ -268,15 +268,16 @@ class PeerService {
   private fillQueueAutomatically() {
     if (!this.gameState) return;
 
+    // Clear existing queue to ensure we only have questions for the current phase
+    this.gameState.questionQueue = [];
+
     const allPreloaded = PRELOADED_QUESTIONS.flatMap(f => f.questions);
     const usedIds = new Set(this.gameState.usedQuestionIds);
-    const queueIds = new Set(this.gameState.questionQueue);
 
     const getQuestionsFromSource = (sourceName: string, count: number) => {
       const available = allPreloaded.filter(q => 
         q.source === sourceName && 
-        !usedIds.has(q.id) && 
-        !queueIds.has(q.id)
+        !usedIds.has(q.id)
       );
       
       // Shuffle available
@@ -285,14 +286,16 @@ class PeerService {
     };
 
     let newQuestions: Question[] = [];
-    if (this.gameState.phase === 'QUAL_1') {
+    const currentPhase = this.gameState.phase;
+
+    if (currentPhase === 'LOBBY' || currentPhase === 'QUAL_1') {
       newQuestions = getQuestionsFromSource('Quiz_CulturaGenerale', 10);
-    } else if (this.gameState.phase === 'QUAL_2') {
+    } else if (currentPhase === 'QUAL_2') {
       newQuestions = getQuestionsFromSource('Quiz_Arti', 10);
-    } else if (this.gameState.phase === 'QUAL_3') {
+    } else if (currentPhase === 'QUAL_3') {
       newQuestions = getQuestionsFromSource('Quiz_Storia_Geopolitica', 10);
     } else {
-      // Fallback for other phases
+      // Mixed for Semis and Finals
       const q1 = getQuestionsFromSource('Quiz_CulturaGenerale', 2);
       const q2 = getQuestionsFromSource('Quiz_Arti', 3);
       const q3 = getQuestionsFromSource('Quiz_Storia_Geopolitica', 2);
@@ -303,7 +306,6 @@ class PeerService {
 
     newQuestions.forEach(q => {
       this.gameState!.questionQueue.push(q.id);
-      queueIds.add(q.id);
     });
     
     console.log(`PeerJS Host: Auto-filled queue with ${newQuestions.length} questions for phase ${this.gameState.phase}.`);
@@ -476,10 +478,10 @@ class PeerService {
           if (this.gameState.selectedAnswers[data.teamId] === undefined) {
             this.gameState.selectedAnswers[data.teamId] = data.answerIndex;
             
-            // Calculate time taken for bonus
-            if (this.gameState.timerEndTime) {
+            // Calculate time taken for bonus starting from when question was activated
+            if (this.gameState.questionStartTime) {
               const now = Date.now();
-              const timeTaken = Math.max(0, (60000 - (this.gameState.timerEndTime - now)) / 1000);
+              const timeTaken = Math.max(0, (now - this.gameState.questionStartTime) / 1000);
               if (!this.gameState.answerTimes) this.gameState.answerTimes = {};
               this.gameState.answerTimes[data.teamId] = timeTaken;
             }
@@ -557,6 +559,7 @@ class PeerService {
         this.gameState.allTeamsAnswered = false;
         this.gameState.round = 1;
         this.gameState.showRoundWinner = false;
+        this.fillQueueAutomatically();
         this.updateCurrentQuestion(payload?.questionId);
         this.stopTimer();
         this.startCountdown('GAME_START');
@@ -627,6 +630,7 @@ class PeerService {
         } else {
           this.gameState.isQuestionFinished = false;
           this.gameState.isQuestionActive = true;
+          this.gameState.questionStartTime = Date.now();
           this.startTimer();
         }
         break;
@@ -894,9 +898,12 @@ class PeerService {
       const timeTaken = this.gameState!.answerTimes?.[team.id] || 999;
 
       if (selectedIdx !== undefined) {
+        // Update fast answer indicator based on time taken
+        team.lastAnswerFast = timeTaken <= 5;
+
         if (selectedIdx === correctIdx) {
           let points = 10;
-          if (isQual && timeTaken <= 3) {
+          if (isQual && timeTaken <= 5) {
             points += 3;
           }
           team.score += points;
@@ -926,7 +933,7 @@ class PeerService {
   private startTimer() {
     if (!this.gameState) return;
     if (this.timerInterval) clearInterval(this.timerInterval);
-    const duration = 60;
+    const duration = 30;
     this.gameState.timer = duration;
     this.gameState.timerActive = true;
     this.gameState.timerEndTime = Date.now() + duration * 1000;

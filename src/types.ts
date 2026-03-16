@@ -5,6 +5,7 @@ export interface Team {
   name: string;
   score: number;
   status: TeamStatus;
+  lastAnswerFast?: boolean;
 }
 
 export type GamePhase = 'LOBBY' | 'QUAL_1' | 'QUAL_2' | 'QUAL_3' | 'QUAL_RESULTS' | 'SEMIS_1' | 'SEMIS_2' | 'FINAL' | 'FINISHED';
@@ -30,6 +31,7 @@ export interface GameState {
   usedQuestionIds: string[];
   isQuestionActive: boolean;
   isQuestionFinished: boolean;
+  questionStartTime?: number;
   teams: Team[];
   selectedAnswers: Record<string, number>; // teamId -> answerIndex
   answerTimes: Record<string, number>; // teamId -> secondsTaken
