@@ -8,7 +8,7 @@ export interface Team {
   lastAnswerFast?: boolean;
 }
 
-export type GamePhase = 'LOBBY' | 'QUAL_1' | 'QUAL_2' | 'QUAL_3' | 'QUAL_RESULTS' | 'SEMIS_1' | 'SEMIS_2' | 'FINAL' | 'FINISHED';
+export type GamePhase = 'LOBBY' | 'QUAL_1' | 'QUAL_2' | 'QUAL_3' | 'QUAL_TIEBREAKER' | 'QUAL_RESULTS' | 'SEMIS_1' | 'SEMIS_2' | 'FINAL' | 'FINISHED';
 
 export interface Question {
   id: string;
@@ -52,6 +52,9 @@ export interface GameState {
   uploadedFiles: string[]; // List of uploaded PDF names
   allQuestions: Record<string, Question[]>;
   leaderboardMusicUrl?: string;
+  tiebreakerTeams?: string[]; // IDs of teams in tie-breaker
+  tiebreakerScores?: Record<string, number>; // teamId -> score (0-3)
+  tiebreakerSpots?: number; // Number of spots available in tie-breaker
   semisMatches: {
     match1: Match;
     match2: Match;

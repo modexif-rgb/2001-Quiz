@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { peerService } from './services/peerService';
 import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon, Timer } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon, Timer, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -303,6 +303,33 @@ export default function App() {
   const [isLeaderboard, setIsLeaderboard] = useState(false);
 
   const [audioEnabled, setAudioEnabled] = useState(false);
+
+  const isPlaying = useMemo(() => {
+    if (userRole === 'ADMIN' || userRole === 'LEADERBOARD') return true;
+    if (!myTeam || !gameState) return false;
+    if (gameState.phase === 'QUAL_TIEBREAKER') {
+      return gameState.tiebreakerTeams?.includes(myTeam.id);
+    }
+    if (gameState.phase === 'SEMIS_1') {
+      return gameState.semisMatches?.match1.teamAId === myTeam.id || gameState.semisMatches?.match1.teamBId === myTeam.id;
+    }
+    if (gameState.phase === 'SEMIS_2') {
+      return gameState.semisMatches?.match2.teamAId === myTeam.id || gameState.semisMatches?.match2.teamBId === myTeam.id;
+    }
+    if (gameState.phase === 'FINAL') {
+      return gameState.finalMatch?.teamAId === myTeam.id || gameState.finalMatch?.teamBId === myTeam.id;
+    }
+    return true;
+  }, [myTeam, gameState, userRole]);
+
+  const isWaitingForSemis2 = useMemo(() => {
+    if (userRole !== 'TEAM') return false;
+    if (!myTeam || !gameState) return false;
+    if (gameState.phase === 'SEMIS_1') {
+      return gameState.semisMatches?.match2.teamAId === myTeam.id || gameState.semisMatches?.match2.teamBId === myTeam.id;
+    }
+    return false;
+  }, [myTeam, gameState, userRole]);
   const leaderboardMusicRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const prevCountdownActive = useRef(false);
@@ -417,10 +444,10 @@ export default function App() {
   // Initialize audio objects once
   useEffect(() => {
     const lbMusic = new Audio();
-    lbMusic.crossOrigin = "anonymous";
+    // Removed crossOrigin as it's not strictly needed for simple playback and can cause CORS issues
     lbMusic.preload = "auto";
     lbMusic.loop = true; // User requested loop
-    lbMusic.volume = 0.5;
+    lbMusic.volume = 1.0; // Increased volume to max
     leaderboardMusicRef.current = lbMusic;
     
     console.log("Audio initialized with synthetic SFX and leaderboard music");
@@ -438,12 +465,15 @@ export default function App() {
 
   // Update music source when it changes in gameState
   useEffect(() => {
-    if (gameState?.leaderboardMusicUrl && gameState.leaderboardMusicUrl !== 'DATA_URL_SYNCED' && leaderboardMusicRef.current) {
-      if (lastLoadedMusicUrl.current !== gameState.leaderboardMusicUrl) {
-        console.log("Loading new leaderboard music...");
-        leaderboardMusicRef.current.src = gameState.leaderboardMusicUrl;
+    const defaultMusicUrl = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3';
+    const musicUrl = gameState?.leaderboardMusicUrl || defaultMusicUrl;
+    
+    if (musicUrl && musicUrl !== 'DATA_URL_SYNCED' && leaderboardMusicRef.current) {
+      if (lastLoadedMusicUrl.current !== musicUrl) {
+        console.log("Loading leaderboard music:", musicUrl);
+        leaderboardMusicRef.current.src = musicUrl;
         leaderboardMusicRef.current.load();
-        lastLoadedMusicUrl.current = gameState.leaderboardMusicUrl;
+        lastLoadedMusicUrl.current = musicUrl;
       }
     }
   }, [gameState?.leaderboardMusicUrl]);
@@ -471,41 +501,54 @@ export default function App() {
   useEffect(() => {
     if (!audioEnabled || !gameState || !isLeaderboard) {
       if (leaderboardMusicRef.current && !leaderboardMusicRef.current.paused) {
+        console.log("Stopping music (audioEnabled:", audioEnabled, "isLeaderboard:", isLeaderboard, ")");
         leaderboardMusicRef.current.pause();
       }
       musicSyncedForTimer.current = false;
       return;
     }
 
+    const defaultMusicUrl = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3';
+    const currentMusicUrl = gameState.leaderboardMusicUrl || defaultMusicUrl;
+
     // Music logic for leaderboard: "background musicale solamente nella leaderboard quando parte il timer"
-    if (isLeaderboard && audioEnabled && gameState.timerActive && gameState.timer > 0 && gameState.leaderboardMusicUrl) {
+    if (isLeaderboard && audioEnabled && gameState.timerActive && gameState.timer > 0) {
       if (leaderboardMusicRef.current) {
         const audio = leaderboardMusicRef.current;
         
         // Ensure src is set correctly
-        if (audio.src !== gameState.leaderboardMusicUrl && !gameState.leaderboardMusicUrl.startsWith('DATA_URL_SYNCED')) {
-           console.log("Syncing audio src in timer effect");
-           audio.src = gameState.leaderboardMusicUrl;
+        if (audio.src !== currentMusicUrl && !currentMusicUrl.startsWith('DATA_URL_SYNCED')) {
+           console.log("Syncing audio src in timer effect:", currentMusicUrl);
+           audio.src = currentMusicUrl;
            audio.load();
         }
 
-        const targetTime = 80 - gameState.timer;
-        const isWayOff = Math.abs(audio.currentTime - targetTime) > 2;
+        // Only sync time if we are not already synced or if we are way off
+        const targetTime = Math.max(0, 80 - gameState.timer);
+        const isWayOff = Math.abs(audio.currentTime - targetTime) > 3;
 
-        if (audio.paused || (!musicSyncedForTimer.current && isWayOff)) {
-          console.log(`Syncing music: paused=${audio.paused}, isWayOff=${isWayOff}, target=${targetTime}, current=${audio.currentTime}`);
-          if (!isNaN(targetTime) && targetTime >= 0) {
-            audio.currentTime = targetTime;
+        if (!musicSyncedForTimer.current || isWayOff) {
+          console.log(`Syncing music time: isWayOff=${isWayOff}, target=${targetTime}, current=${audio.currentTime}`);
+          if (!isNaN(targetTime)) {
+            try {
+              audio.currentTime = targetTime;
+              musicSyncedForTimer.current = true;
+            } catch (e) {
+              console.warn("Could not set currentTime (might still be loading)", e);
+            }
           }
-          musicSyncedForTimer.current = true;
         }
         
-        if (audio.paused) {
+        if (audio.paused && audio.readyState >= 2) { // 2 = HAVE_CURRENT_DATA
+          console.log("Attempting to play music...");
           audio.play().then(() => {
             console.log("Music playback started successfully");
           }).catch(e => {
-            console.error("Music play failed - likely needs user interaction", e);
+            console.error("Music play failed", e);
           });
+        } else if (audio.paused) {
+          // If paused but not ready, try to play anyway or wait for next tick
+          audio.play().catch(() => {});
         }
       }
     } else {
@@ -636,10 +679,19 @@ export default function App() {
       SEMIS: [],
       FINAL: [],
     }),
-    leaderboardMusicUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    leaderboardMusicUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
     semisMatches: null,
     finalMatch: null,
   });
+
+  useEffect(() => {
+    if (myTeam && gameState?.teams) {
+      const updatedTeam = gameState.teams.find(t => t.id === myTeam.id);
+      if (updatedTeam && (updatedTeam.score !== myTeam.score || updatedTeam.status !== myTeam.status || updatedTeam.lastAnswerFast !== myTeam.lastAnswerFast)) {
+        setMyTeam(updatedTeam);
+      }
+    }
+  }, [gameState?.teams, myTeam]);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -949,18 +1001,20 @@ export default function App() {
 
   if (!audioEnabled && isLeaderboard) {
     return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 transition-colors duration-500">
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-zinc-50 border border-zinc-200 p-8 rounded-3xl text-center max-w-sm space-y-6 shadow-2xl"
+          className="bg-zinc-900 border-2 border-emerald-500/50 p-12 rounded-[3rem] text-center max-w-lg space-y-8 shadow-[0_0_100px_rgba(16,185,129,0.2)]"
         >
-          <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
-            <Zap className="w-8 h-8 text-emerald-500" />
+          <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-500/20">
+            <Volume2 className="w-12 h-12 text-emerald-500 animate-pulse" />
           </div>
           <div>
-            <h3 className="text-xl font-bold mb-2 text-zinc-950">Attiva Audio</h3>
-            <p className="text-zinc-600 text-sm">Clicca per abilitare la musica e gli effetti sonori del gioco.</p>
+            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Attiva l'Audio</h3>
+            <p className="text-zinc-400 text-lg font-medium">
+              Per un'esperienza completa con musica e suoni della gara, clicca il pulsante qui sotto.
+            </p>
           </div>
           <div className="flex flex-col gap-3">
             <button 
@@ -1330,7 +1384,7 @@ export default function App() {
                    gameState.phase === 'QUAL_2' ? 'Arti' : 
                    gameState.phase === 'QUAL_3' ? 'Storia e Geopolitica' : 'Qualificazioni'}
                 </span>
-                <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}/10</h2>
+                <h2 className="text-6xl font-black">Domanda {gameState.currentQuestionIndex}{gameState.phase.startsWith('QUAL_') ? '/10' : ''}</h2>
               </div>
 
               <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center shadow-2xl space-y-8">
@@ -1431,7 +1485,7 @@ export default function App() {
                             {gameState.phase.startsWith('QUAL_') && 
                              gameState.selectedAnswers[myTeam.id] === gameState.currentQuestion.correctAnswer && 
                              gameState.answerTimes?.[myTeam.id] !== undefined &&
-                             gameState.answerTimes[myTeam.id] <= 3 && (
+                             gameState.answerTimes[myTeam.id] <= 5 && (
                               <motion.div 
                                 initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
                                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
@@ -1479,13 +1533,13 @@ export default function App() {
               animate={{ opacity: 1 }}
               className="text-center space-y-8"
             >
-              {myTeam.status === 'qualificata' || myTeam.status === 'in semifinale' ? (
+              {(gameState.teams.find(t => t.id === myTeam?.id)?.status === 'in semifinale') ? (
                 <>
                   <div className="w-32 h-32 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-16 h-16 text-emerald-500" />
                   </div>
                   <h1 className="text-5xl font-black text-zinc-950">QUALIFICATI!</h1>
-                  <p className="text-zinc-600 text-xl font-bold">Complimenti! Hai passato il turno</p>
+                  <p className="text-zinc-600 text-xl font-bold">Complimenti! sei qualificato per le semifinali!</p>
                 </>
               ) : (
                 <>
@@ -1493,99 +1547,154 @@ export default function App() {
                     <XCircle className="w-16 h-16 text-zinc-400" />
                   </div>
                   <h1 className="text-5xl font-black text-zinc-400">FINE CORSA</h1>
-                  <p className="text-zinc-500 text-xl font-bold">Il tuo percorso si chiude qua</p>
+                  <p className="text-zinc-500 text-xl font-bold">il tuo percorso finisce qua</p>
                 </>
               )}
             </motion.div>
           )}
 
-          {(gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL') && (
+          {(gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL' || gameState.phase === 'QUAL_TIEBREAKER') && (
             <motion.div 
               key="buzz-phase"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="w-full flex flex-col items-center gap-4 sm:gap-8"
             >
-              <div className="text-center space-y-2">
-                <span className="text-xs font-bold text-amber-500 uppercase tracking-[0.2em]">
-                  {gameState.phase === 'SEMIS' ? 'Semifinale' : 'Finale'}
-                </span>
-                <h2 className="text-4xl font-black">Domanda {gameState.currentQuestionIndex}</h2>
-              </div>
-
-              {gameState.isQuestionActive && gameState.currentQuestion ? (
-                <div className="w-full space-y-4 sm:space-y-8">
-                  <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-8 text-center w-full shadow-2xl">
-                    <p className="text-xl sm:text-3xl font-bold text-zinc-950 dark:text-white leading-tight">{gameState.currentQuestion.text}</p>
-                  </div>
-
-                  {gameState.currentQuestion.options && (
-                    <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
-                      {gameState.currentQuestion.options.map((option, idx) => (
-                        <div 
-                          key={idx} 
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 sm:p-6 text-left flex items-center gap-2 sm:gap-4 opacity-50 cursor-not-allowed group"
-                        >
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-zinc-400 text-xs sm:text-base">
-                            {String.fromCharCode(65 + idx)}
-                          </div>
-                          <span className="text-zinc-500 font-bold text-xs sm:text-base line-clamp-2">{option}</span>
-                        </div>
-                      ))}
-                    </div>
+              {!isPlaying ? (
+                <div className="text-center space-y-8 py-20 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full">
+                  {isWaitingForSemis2 ? (
+                    <>
+                      <div className="w-32 h-32 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
+                        <Clock className="w-16 h-16 text-amber-500" />
+                      </div>
+                      <h1 className="text-4xl font-black text-zinc-950 dark:text-white">ATTENDI IL TUO TURNO</h1>
+                      <p className="text-zinc-600 dark:text-zinc-400 text-xl font-bold">Ora è in corso la prima semifinale! Attendi il tuo turno</p>
+                    </>
+                  ) : gameState.phase === 'QUAL_TIEBREAKER' ? (
+                    <>
+                      <div className="w-32 h-32 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
+                        <Zap className="w-16 h-16 text-amber-500" />
+                      </div>
+                      <h1 className="text-4xl font-black text-zinc-950 dark:text-white">SPAREGGIO IN CORSO</h1>
+                      <p className="text-zinc-600 dark:text-zinc-400 text-xl font-bold">Alcune squadre sono a pari punti. Lo spareggio deciderà chi passa!</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto">
+                        <XCircle className="w-16 h-16 text-zinc-400 dark:text-zinc-600" />
+                      </div>
+                      <h1 className="text-5xl font-black text-zinc-400 dark:text-zinc-600">FINE CORSA</h1>
+                      <p className="text-zinc-500 dark:text-zinc-400 text-xl font-bold">il tuo percorso finisce qua</p>
+                    </>
                   )}
                 </div>
               ) : (
-                <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
-                    <Zap className="w-8 h-8 text-zinc-400 dark:text-zinc-600" />
+                <>
+                  <div className="text-center space-y-2">
+                    <span className="text-xs font-bold text-amber-500 uppercase tracking-[0.2em]">
+                      {gameState.phase === 'QUAL_TIEBREAKER' ? 'Spareggio Qualificazioni' : 
+                       gameState.phase === 'FINAL' ? 'Finale' : 'Semifinale'}
+                    </span>
+                    <h2 className="text-4xl font-black">Domanda {gameState.currentQuestionIndex}</h2>
+                    {gameState.phase === 'QUAL_TIEBREAKER' && (
+                      <p className="text-zinc-500 font-bold">Chi arriva prima a 3 punti passa!</p>
+                    )}
                   </div>
-                  <p className="text-3xl font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Prossima Domanda</p>
-                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">L'host sta preparando la sfida...</p>
-                </div>
-              )}
 
-              {gameState.isQuestionActive && (gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL') && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleBuzz}
-                  disabled={gameState.buzzes.some(b => b.teamId === myTeam?.id)}
-                  className={cn(
-                    "w-32 h-32 sm:w-48 sm:h-48 rounded-full border-4 sm:border-8 flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all shadow-[0_0_30px_rgba(245,158,11,0.2)] relative overflow-hidden",
-                    gameState.buzzes.some(b => b.teamId === myTeam?.id)
-                      ? "bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed shadow-none"
-                      : "bg-amber-500 border-amber-400 text-zinc-950 hover:bg-amber-400 hover:shadow-[0_0_60px_rgba(245,158,11,0.4)] active:scale-90"
+                  {gameState.phase === 'QUAL_TIEBREAKER' && (
+                    <div className="flex flex-wrap justify-center gap-4 w-full">
+                      {gameState.tiebreakerTeams?.map(teamId => {
+                        const team = gameState.teams.find(t => t.id === teamId);
+                        const score = gameState.tiebreakerScores?.[teamId] || 0;
+                        return (
+                          <div key={teamId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 flex flex-col items-center gap-2 min-w-[120px]">
+                            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{team?.name}</span>
+                            <div className="flex gap-1">
+                              {[1, 2, 3].map(i => (
+                                <div key={i} className={cn("w-4 h-4 rounded-full", i <= score ? "bg-amber-500" : "bg-zinc-200 dark:bg-zinc-800")} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
-                >
-                  {!gameState.buzzes.some(b => b.teamId === myTeam?.id) && (
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.2, 1],
-                        opacity: [0.1, 0.3, 0.1] 
-                      }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="absolute inset-0 bg-white rounded-full"
-                    />
+
+                  {gameState.isQuestionActive && gameState.currentQuestion ? (
+                    <div className="w-full space-y-4 sm:space-y-8">
+                      <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-8 text-center w-full shadow-2xl">
+                        <p className="text-xl sm:text-3xl font-bold text-zinc-950 dark:text-white leading-tight">{gameState.currentQuestion.text}</p>
+                      </div>
+
+                      {gameState.currentQuestion.options && (
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
+                          {gameState.currentQuestion.options.map((option, idx) => (
+                            <div 
+                              key={idx} 
+                              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 sm:p-6 text-left flex items-center gap-2 sm:gap-4 opacity-50 cursor-not-allowed group"
+                            >
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-zinc-400 text-xs sm:text-base">
+                                {String.fromCharCode(65 + idx)}
+                              </div>
+                              <span className="text-zinc-500 font-bold text-xs sm:text-base line-clamp-2">{option}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-12 text-center w-full flex flex-col items-center gap-6">
+                      <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center animate-pulse">
+                        <Zap className="w-8 h-8 text-zinc-400 dark:text-zinc-600" />
+                      </div>
+                      <p className="text-3xl font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Prossima Domanda</p>
+                      <p className="text-zinc-500 dark:text-zinc-400 font-medium">L'host sta preparando la sfida...</p>
+                    </div>
                   )}
-                  <Zap className={cn("w-10 h-10 sm:w-16 sm:h-16 relative z-10", !gameState.buzzes.some(b => b.teamId === myTeam?.id) && "animate-pulse")} />
-                  <span className="text-sm sm:text-xl font-black uppercase tracking-tighter relative z-10">BUZZ</span>
-                </motion.button>
-              )}
-              
-              {gameState.buzzes.length > 0 && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 shadow-lg"
-                >
-                  <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-zinc-950" />
-                  </div>
-                  <p className="font-bold text-zinc-950">
-                    {gameState.teams.find(t => t.id === gameState.buzzes[0].teamId)?.name} ha premuto!
-                  </p>
-                </motion.div>
+
+                  {gameState.isQuestionActive && (gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL' || gameState.phase === 'QUAL_TIEBREAKER') && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleBuzz}
+                      disabled={gameState.buzzes.some(b => b.teamId === myTeam?.id)}
+                      className={cn(
+                        "w-32 h-32 sm:w-48 sm:h-48 rounded-full border-4 sm:border-8 flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all shadow-[0_0_30px_rgba(245,158,11,0.2)] relative overflow-hidden",
+                        gameState.buzzes.some(b => b.teamId === myTeam?.id)
+                          ? "bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed shadow-none"
+                          : "bg-amber-500 border-amber-400 text-zinc-950 hover:bg-amber-400 hover:shadow-[0_0_60px_rgba(245,158,11,0.4)] active:scale-90"
+                      )}
+                    >
+                      {!gameState.buzzes.some(b => b.teamId === myTeam?.id) && (
+                        <motion.div
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            opacity: [0.1, 0.3, 0.1] 
+                          }}
+                          transition={{ repeat: Infinity, duration: 2 }}
+                          className="absolute inset-0 bg-white rounded-full"
+                        />
+                      )}
+                      <Zap className={cn("w-10 h-10 sm:w-16 sm:h-16 relative z-10", !gameState.buzzes.some(b => b.teamId === myTeam?.id) && "animate-pulse")} />
+                      <span className="text-sm sm:text-xl font-black uppercase tracking-tighter relative z-10">BUZZ</span>
+                    </motion.button>
+                  )}
+                  
+                  {gameState.buzzes.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 shadow-lg"
+                    >
+                      <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-zinc-950" />
+                      </div>
+                      <p className="font-bold text-zinc-950 dark:text-white">
+                        {gameState.teams.find(t => t.id === gameState.buzzes[0].teamId)?.name} ha premuto!
+                      </p>
+                    </motion.div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
@@ -1636,41 +1745,18 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
     PRELOADED_QUESTIONS.forEach(f => { initial[f.name] = f.name === 'Cultura Generale - Facile'; });
     return initial;
   });
-  const [isMusicUploading, setIsMusicUploading] = useState(false);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const testAudioRef = useRef<HTMLAudioElement | null>(null);
-
+  // Music upload state removed as per request
+  
   // Memoize sendAction to avoid re-renders and lag
   const sendAction = useCallback((action: string, payload: any = {}) => {
     // Some actions are top-level, others are ADMIN_ACTION
-    const topLevelActions = ['SET_LEADERBOARD_MUSIC', 'SET_ROUND', 'REORDER_QUEUE'];
+    const topLevelActions = ['SET_LEADERBOARD_MUSIC', 'SET_ROUND', 'REORDER_QUEUE', 'CORRECT_BUZZ', 'INCORRECT_BUZZ', 'RESET_BUZZES', 'CLEAR_BUZZES'];
     if (topLevelActions.includes(action)) {
       peerService.send({ type: action as any, payload });
     } else {
       peerService.send({ type: 'ADMIN_ACTION', action, payload });
     }
   }, []);
-
-  const handleMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsMusicUploading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        sendAction('SET_LEADERBOARD_MUSIC', { url: base64 });
-        alert("Musica caricata con successo!");
-        setIsMusicUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error("Music upload error:", err);
-      alert("Errore durante il caricamento della musica.");
-      setIsMusicUploading(false);
-    }
-  };
 
   const availableQuestions = gameState.allQuestions[gameState.phase] || [];
   const allQuestionsFlat = useMemo(() => {
@@ -1984,7 +2070,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
           </div>
         </section>
 
-        {/* Music Management Section */}
+        {/* Music Management Section - Disabled as per request */}
         <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -1993,75 +2079,27 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                 Musica per la Leaderboard
               </h3>
               <p className="text-[10px] text-zinc-500">
-                L'audio verrà riprodotto in loop sulla leaderboard quando il timer è attivo.
+                Musica predefinita impostata. Verrà riprodotta automaticamente durante il timer.
               </p>
             </div>
-            {gameState.leaderboardMusicUrl && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  const audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3');
+                  audio.play().catch(e => alert("Errore riproduzione: " + e.message));
+                  setTimeout(() => {
+                    audio.pause();
+                    audio.src = "";
+                  }, 5000);
+                }}
+                className="px-4 py-2 bg-emerald-500 text-zinc-950 rounded-xl font-bold text-xs hover:bg-emerald-400 transition-all shadow-sm"
+              >
+                Prova Audio (5s)
+              </button>
               <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
-                MUSICA IMPOSTATA
+                ATTIVA
               </span>
-            )}
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="flex gap-2 w-full sm:w-auto">
-              <label className="flex-1 sm:flex-none px-6 py-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
-                <Plus className="w-4 h-4" />
-                {isMusicUploading ? 'Caricamento...' : 'Carica MP3'}
-                <input type="file" accept="audio/*" onChange={handleMusicUpload} className="hidden" disabled={isMusicUploading} />
-              </label>
-              {gameState.leaderboardMusicUrl && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (isMusicPlaying) {
-                        testAudioRef.current?.pause();
-                        setIsMusicPlaying(false);
-                      } else {
-                        if (!testAudioRef.current) {
-                          testAudioRef.current = new Audio(gameState.leaderboardMusicUrl);
-                          testAudioRef.current.onended = () => setIsMusicPlaying(false);
-                        } else {
-                          testAudioRef.current.src = gameState.leaderboardMusicUrl;
-                        }
-                        testAudioRef.current.play().catch(e => alert("Impossibile riprodurre l'audio: " + e.message));
-                        setIsMusicPlaying(true);
-                      }
-                    }}
-                    className={cn(
-                      "p-3 rounded-2xl border transition-all",
-                      isMusicPlaying ? "bg-emerald-500 text-zinc-950 border-emerald-400" : "bg-zinc-100 text-zinc-500 border-zinc-200 hover:text-zinc-950"
-                    )}
-                    title={isMusicPlaying ? "Ferma Test" : "Prova Audio"}
-                  >
-                    {isMusicPlaying ? <XCircle className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm("Sei sicuro di voler eliminare la musica caricata?")) {
-                        if (isMusicPlaying) {
-                          testAudioRef.current?.pause();
-                          setIsMusicPlaying(false);
-                        }
-                        sendAction('DELETE_LEADERBOARD_MUSIC');
-                      }
-                    }}
-                    className="p-3 bg-zinc-100 text-zinc-500 border border-zinc-200 rounded-2xl hover:text-red-500 hover:bg-red-500/10 transition-all"
-                    title="Elimina Musica"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
             </div>
-            {gameState.leaderboardMusicUrl && (
-              <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 rounded-2xl w-full sm:w-auto overflow-hidden">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="text-xs text-zinc-500 truncate max-w-[200px]">
-                  {gameState.leaderboardMusicUrl.includes('/uploads/') ? 'Musica Caricata' : 'Musica Predefinita'}
-                </span>
-              </div>
-            )}
           </div>
         </section>
 
@@ -2087,7 +2125,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                 <div className="bg-white p-4 rounded-2xl border border-zinc-200">
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Domanda</p>
                   <div className="flex items-center justify-between">
-                    <p className="text-lg font-black text-emerald-500">{gameState.currentQuestionIndex}/10</p>
+                    <p className="text-lg font-black text-emerald-500">{gameState.currentQuestionIndex}{gameState.phase.startsWith('QUAL_') ? '/10' : ''}</p>
                     <div className="flex gap-2">
                       <button 
                         onClick={() => peerService.send({ type: 'PREVIOUS_QUESTION' })}
@@ -2520,7 +2558,8 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         
         <div className="space-y-4">
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 uppercase">
-            {gameState.phase.startsWith('QUAL_') ? 'Qualificazioni' : 'Classifica Real-Time'}
+            {gameState.phase === 'QUAL_TIEBREAKER' ? 'Spareggio Qualificazioni' : 
+             gameState.phase.startsWith('QUAL_') ? 'Qualificazioni' : 'Classifica Real-Time'}
           </h1>
           {(isAdmin ? myPeerId : roomId) && (
             <div className="flex flex-wrap items-center justify-center gap-3 mx-auto w-fit">
@@ -2529,25 +2568,27 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                 <p className="text-xs font-black text-emerald-500">{isAdmin ? myPeerId : roomId}</p>
               </div>
               <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
-                <div className={cn("w-2 h-2 rounded-full", gameState.leaderboardMusicUrl ? "bg-emerald-500 animate-pulse" : "bg-zinc-300")} />
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Musica:</p>
-                <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">{gameState.leaderboardMusicUrl ? 'Caricata' : 'Non presente'}</p>
-                {gameState.leaderboardMusicUrl && (
-                  <button 
-                    onClick={() => {
-                      if (leaderboardMusicRef.current) {
-                        if (leaderboardMusicRef.current.paused) {
-                          leaderboardMusicRef.current.play().catch(console.error);
-                        } else {
-                          leaderboardMusicRef.current.pause();
-                        }
+                <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">Predefinita</p>
+                <button 
+                  onClick={() => {
+                    if (leaderboardMusicRef.current) {
+                      if (leaderboardMusicRef.current.paused) {
+                        leaderboardMusicRef.current.play().catch(e => {
+                          console.error("Manual play failed", e);
+                          alert("Impossibile riprodurre l'audio. Assicurati di aver cliccato 'Attiva Audio'.");
+                        });
+                      } else {
+                        leaderboardMusicRef.current.pause();
                       }
-                    }}
-                    className="ml-1 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
-                  >
-                    <Zap className="w-3 h-3 text-emerald-500" />
-                  </button>
-                )}
+                    }
+                  }}
+                  className="ml-1 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                  title="Play/Pause Manuale"
+                >
+                  <Zap className="w-3 h-3 text-emerald-500" />
+                </button>
               </div>
               <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -2556,9 +2597,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
               </div>
             </div>
           )}
-          <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-1">
             <p className="text-emerald-500 text-sm sm:text-lg font-black uppercase tracking-[0.3em]">Round {gameState.round} | {roundType}</p>
-            <p className="text-zinc-400 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}/10</p>
+            <p className="text-zinc-400 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}{gameState.phase.startsWith('QUAL_') ? '/10' : ''}</p>
           </div>
         </div>
       </motion.div>
@@ -2603,6 +2644,25 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   <h3 className="text-2xl sm:text-4xl font-black text-zinc-950 dark:text-white leading-[1.1] tracking-tighter">
                     {gameState.currentQuestion.text}
                   </h3>
+
+                  {gameState.phase === 'QUAL_TIEBREAKER' && (
+                    <div className="flex flex-wrap justify-center gap-4 mt-8">
+                      {gameState.tiebreakerTeams?.map(teamId => {
+                        const team = gameState.teams.find(t => t.id === teamId);
+                        const score = gameState.tiebreakerScores?.[teamId] || 0;
+                        return (
+                          <div key={teamId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 flex flex-col items-center gap-2 min-w-[150px] shadow-lg">
+                            <span className="text-sm font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">{team?.name}</span>
+                            <div className="flex gap-2">
+                              {[1, 2, 3].map(i => (
+                                <div key={i} className={cn("w-6 h-6 rounded-full border-2", i <= score ? "bg-amber-500 border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700")} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {gameState.buzzes.length > 0 && (
                     <motion.div 
