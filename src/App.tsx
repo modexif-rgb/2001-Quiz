@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { peerService } from './services/peerService';
 import { GameState, Team, Question } from './types';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon, Timer, Clock } from 'lucide-react';
+import { Trophy, Users, Zap, Settings, LogOut, ChevronRight, AlertCircle, CheckCircle2, XCircle, FileText, Search, Plus, Folder, FolderOpen, Trash2, ArrowUp, ArrowDown, ListOrdered, ArrowLeft, Copy, Share2, X, BookOpen, Sun, Moon, Timer, Clock, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -256,6 +256,93 @@ const ThemeToggle = ({ theme, toggleTheme }: { theme: 'light' | 'dark', toggleTh
   </button>
 );
 
+function RulesScreen({ onAccept, theme, toggleTheme }: { onAccept: () => void, theme: 'light' | 'dark', toggleTheme: () => void }) {
+  return (
+    <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-500">
+      <div className="fixed top-6 right-6 z-50">
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+      </div>
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[100px]" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[100px]" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl sm:rounded-[3rem] p-6 sm:p-10 shadow-[0_30px_100px_rgba(0,0,0,0.08)] space-y-6 sm:space-y-8 relative z-10"
+      >
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-500/10 rounded-2xl sm:rounded-[2rem] flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-500" />
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 dark:text-white tracking-tight">
+            Regolamento del <span className="text-emerald-500">Quiz Show</span>
+          </h1>
+          <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 font-medium">
+            Leggi attentamente le regole prima di iniziare la sfida!
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-h-[40vh] md:max-h-none overflow-y-auto md:overflow-visible pr-2 md:pr-0">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 sm:gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                <Users className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-zinc-950 dark:text-white uppercase tracking-tight">Partecipazione</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Accedi inserendo il tuo ID Squadra e il nome scelto per il team.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                <Zap className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-zinc-950 dark:text-white uppercase tracking-tight">Prenotazione</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Usa il pulsante "Prenotati" (Buzzer) per rispondere. Solo il più veloce può parlare!</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                <Trophy className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-zinc-950 dark:text-white uppercase tracking-tight">Punteggio</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Punti per risposte corrette. Penalità per risposte errate o prenotazioni a vuoto.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                <Clock className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-zinc-950 dark:text-white uppercase tracking-tight">Tempo</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Hai 60 secondi per ogni domanda. Non farti prendere dal panico!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onAccept}
+            className="w-full py-6 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-widest"
+          >
+            Ho capito, andiamo!
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -298,6 +385,7 @@ export default function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [pendingAnswer, setPendingAnswer] = useState<number | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showRules, setShowRules] = useState(true);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLeaderboard, setIsLeaderboard] = useState(false);
@@ -362,7 +450,7 @@ export default function App() {
       if (type === 'beep') {
         oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
-        gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + 0.2);
@@ -370,7 +458,7 @@ export default function App() {
         oscillator.type = 'sawtooth';
         oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.4);
-        gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + 0.4);
@@ -387,8 +475,8 @@ export default function App() {
           osc.frequency.linearRampToValueAtTime(baseFreq * 2, now + 1.5);
           osc.frequency.linearRampToValueAtTime(baseFreq, now + 2.0);
           
-          g.gain.setValueAtTime(0.15, now);
-          g.gain.linearRampToValueAtTime(0.15, now + 1.8);
+          g.gain.setValueAtTime(0.4, now);
+          g.gain.linearRampToValueAtTime(0.4, now + 1.8);
           g.gain.linearRampToValueAtTime(0.01, now + 2.0);
           
           osc.connect(g);
@@ -399,7 +487,7 @@ export default function App() {
       } else if (type === 'countdown') {
         oscillator.type = 'triangle';
         oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.6, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + 0.15);
@@ -412,7 +500,7 @@ export default function App() {
           const g = audioCtx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now + i * 0.05);
-          g.gain.setValueAtTime(0.3, now + i * 0.05);
+          g.gain.setValueAtTime(0.6, now + i * 0.05);
           g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.5);
           osc.connect(g);
           g.connect(audioCtx.destination);
@@ -428,7 +516,7 @@ export default function App() {
           const g = audioCtx.createGain();
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(freq, now + i * 0.1);
-          g.gain.setValueAtTime(0.2, now + i * 0.1);
+          g.gain.setValueAtTime(0.5, now + i * 0.1);
           g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.8);
           osc.connect(g);
           g.connect(audioCtx.destination);
@@ -447,7 +535,7 @@ export default function App() {
     // Removed crossOrigin as it's not strictly needed for simple playback and can cause CORS issues
     lbMusic.preload = "auto";
     lbMusic.loop = true; // User requested loop
-    lbMusic.volume = 1.0; // Increased volume to max
+    lbMusic.volume = 0.35; // Lowered volume so SFX are more prominent
     leaderboardMusicRef.current = lbMusic;
     
     console.log("Audio initialized with synthetic SFX and leaderboard music");
@@ -465,7 +553,7 @@ export default function App() {
 
   // Update music source when it changes in gameState
   useEffect(() => {
-    const defaultMusicUrl = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3';
+    const defaultMusicUrl = '/quiz_music.mp3';
     const musicUrl = gameState?.leaderboardMusicUrl || defaultMusicUrl;
     
     if (musicUrl && musicUrl !== 'DATA_URL_SYNCED' && leaderboardMusicRef.current) {
@@ -508,7 +596,7 @@ export default function App() {
       return;
     }
 
-    const defaultMusicUrl = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3';
+    const defaultMusicUrl = '/quiz_music.mp3';
     const currentMusicUrl = gameState.leaderboardMusicUrl || defaultMusicUrl;
 
     // Music logic for leaderboard: "background musicale solamente nella leaderboard quando parte il timer"
@@ -516,16 +604,10 @@ export default function App() {
       if (leaderboardMusicRef.current) {
         const audio = leaderboardMusicRef.current;
         
-        // Ensure src is set correctly
-        if (audio.src !== currentMusicUrl && !currentMusicUrl.startsWith('DATA_URL_SYNCED')) {
-           console.log("Syncing audio src in timer effect:", currentMusicUrl);
-           audio.src = currentMusicUrl;
-           audio.load();
-        }
-
         // Only sync time if we are not already synced or if we are way off
-        const targetTime = Math.max(0, 80 - gameState.timer);
-        const isWayOff = Math.abs(audio.currentTime - targetTime) > 3;
+        // The music is 60s, so we start at 60 - timer
+        const targetTime = Math.max(0, 60 - gameState.timer);
+        const isWayOff = Math.abs(audio.currentTime - targetTime) > 2;
 
         if (!musicSyncedForTimer.current || isWayOff) {
           console.log(`Syncing music time: isWayOff=${isWayOff}, target=${targetTime}, current=${audio.currentTime}`);
@@ -679,7 +761,7 @@ export default function App() {
       SEMIS: [],
       FINAL: [],
     }),
-    leaderboardMusicUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+    leaderboardMusicUrl: '/quiz_music.mp3',
     semisMatches: null,
     finalMatch: null,
   });
@@ -794,6 +876,10 @@ export default function App() {
     }
   };
 
+  if (showRules && view === 'SELECTION') {
+    return <RulesScreen onAccept={() => setShowRules(false)} theme={theme} toggleTheme={toggleTheme} />;
+  }
+
   if (view === 'SELECTION') {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-500">
@@ -808,28 +894,28 @@ export default function App() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[3rem] p-10 shadow-[0_30px_100px_rgba(0,0,0,0.08)] space-y-12 relative z-10"
+          className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl sm:rounded-[3rem] p-6 sm:p-10 shadow-[0_30px_100px_rgba(0,0,0,0.08)] space-y-8 sm:space-y-12 relative z-10"
         >
           <div className="text-center space-y-2">
             <motion.button 
               whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsRolePopupOpen(true)}
-              className="w-24 h-24 bg-emerald-500/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 cursor-pointer hover:bg-emerald-500/20 transition-all group relative"
+              className="w-20 h-20 sm:w-24 sm:h-24 bg-emerald-500/10 rounded-2xl sm:rounded-[2.5rem] flex items-center justify-center mx-auto mb-4 sm:mb-6 cursor-pointer hover:bg-emerald-500/20 transition-all group relative"
             >
-              <Trophy className="w-10 h-10 text-emerald-500 group-hover:scale-110 transition-transform" />
-              <div className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 p-2 rounded-xl shadow-sm">
-                <Settings className="w-3.5 h-3.5 text-zinc-400" />
+              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-500 group-hover:scale-110 transition-transform" />
+              <div className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 p-1.5 sm:p-2 rounded-xl shadow-sm">
+                <Settings className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-zinc-400" />
               </div>
             </motion.button>
             <div className="space-y-1">
-              <h1 className="text-4xl font-black text-zinc-950 dark:text-white tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 dark:text-white tracking-tight">
                 Benvenuto <span className="text-emerald-500">al Quiz</span>
               </h1>
               <div className="flex items-center justify-center gap-3">
-                <div className="h-[1px] w-12 bg-zinc-200 dark:bg-zinc-800" />
-                <p className="text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-[0.4em] text-sm">2001 Domande</p>
-                <div className="h-[1px] w-12 bg-zinc-200 dark:bg-zinc-800" />
+                <div className="h-[1px] w-8 sm:w-12 bg-zinc-200 dark:bg-zinc-800" />
+                <p className="text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-[0.2em] sm:tracking-[0.4em] text-[10px] sm:text-sm">2001 Domande</p>
+                <div className="h-[1px] w-8 sm:w-12 bg-zinc-200 dark:bg-zinc-800" />
               </div>
             </div>
           </div>
@@ -839,17 +925,17 @@ export default function App() {
               whileHover={{ scale: 1.02, y: -4 }}
               whileTap={{ scale: 0.9, rotate: -1 }}
               onClick={() => handleRoleSelect('TEAM')}
-              className="w-full py-10 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 shadow-[0_20px_50px_rgba(16,185,129,0.3)] group relative overflow-hidden"
+              className="w-full py-8 sm:py-10 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black rounded-2xl sm:rounded-[3rem] transition-all flex flex-col items-center justify-center gap-3 sm:gap-4 shadow-[0_20px_50px_rgba(16,185,129,0.3)] group relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/30 to-transparent rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
               
-              <div className="w-16 h-16 bg-zinc-950/10 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-zinc-950/20 transition-all duration-500 relative z-10">
-                <Users className="w-8 h-8 text-zinc-950" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-zinc-950/10 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-zinc-950/20 transition-all duration-500 relative z-10">
+                <Users className="w-6 h-6 sm:w-8 h-8 text-zinc-950" />
               </div>
               
               <div className="space-y-1 relative z-10">
-                <span className="text-2xl tracking-tight block">ACCEDI COME SQUADRA</span>
+                <span className="text-xl sm:text-2xl tracking-tight block uppercase">ACCEDI COME SQUADRA</span>
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-950/60 font-bold uppercase tracking-[0.2em]">
                   <span className="w-1 h-1 bg-zinc-950 rounded-full animate-pulse" />
                   <span>Inizia la sfida</span>
@@ -937,11 +1023,11 @@ export default function App() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-6"
+          className="w-full max-w-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6"
         >
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-zinc-950 dark:text-white">Accesso Riservato</h1>
-            <p className="text-zinc-600 dark:text-zinc-400">Inserisci la password per {userRole}</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-950 dark:text-white">Accesso Riservato</h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Inserisci la password per {userRole}</p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -1145,23 +1231,23 @@ export default function App() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-2xl relative"
+          className="w-full max-w-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative"
         >
           <button
             onClick={() => setView('SELECTION')}
-            className="absolute top-6 left-6 p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
+            className="absolute top-4 sm:top-6 left-4 sm:left-6 p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
             title="Torna alla selezione"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
 
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
-              <Trophy className="w-8 h-8 text-emerald-500" />
+          <div className="flex justify-center mb-6 sm:mb-8">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-500/10 rounded-xl sm:rounded-2xl flex items-center justify-center">
+              <Trophy className="w-6 h-6 sm:w-8 h-8 text-emerald-500" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-zinc-950 dark:text-white text-center mb-2">2001 Domande</h1>
-          <p className="text-zinc-600 dark:text-zinc-400 text-center mb-8">Inserisci l'ID della stanza e il nome della tua squadra</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-950 dark:text-white text-center mb-2">2001 Domande</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center mb-6 sm:mb-8">Inserisci l'ID della stanza e il nome della tua squadra</p>
           
           <form onSubmit={handleJoin} className="space-y-4">
             <div className="space-y-4">
@@ -1834,77 +1920,56 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-950 dark:text-white p-4 sm:p-8 transition-colors duration-500">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
-        <header className="flex flex-col lg:flex-row justify-between items-center gap-6 text-center lg:text-left">
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-            <button
-              onClick={onBack}
-              className="p-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
-              title="Torna alla selezione"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center shrink-0">
-              <Settings className="w-6 h-6 text-emerald-500" />
+        <header className="flex flex-col lg:flex-row justify-between items-center gap-4 sm:gap-6 text-center lg:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full lg:w-auto">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-center sm:justify-start">
+              <button
+                onClick={onBack}
+                className="p-2 sm:p-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl sm:rounded-2xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                title="Torna alla selezione"
+              >
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500/10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
+              </div>
+              <h1 className="text-xl sm:text-3xl font-black">Admin Dashboard</h1>
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black">Admin Dashboard</h1>
-              <div className="flex flex-col gap-1 mt-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-zinc-500 dark:text-zinc-400 text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
-                  <div className={cn(
-                    "w-2 h-2 rounded-full animate-pulse",
-                    myPeerId ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
-                  )} title={myPeerId ? "Connesso al server" : "Connessione..."} />
-                  {myPeerId && (
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(myPeerId);
-                        alert("ID Stanza copiato!");
-                      }}
-                      className="p-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
-                      title="Copia ID"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </button>
-                  )}
-                  {gameState.leaderboardMusicUrl && (
-                    <button 
-                      onClick={() => {
-                        if (leaderboardMusicRef.current) {
-                          if (leaderboardMusicRef.current.paused) {
-                            leaderboardMusicRef.current.play().catch(console.error);
-                          } else {
-                            leaderboardMusicRef.current.pause();
-                          }
-                        }
-                      }}
-                      className="p-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
-                      title="Play/Pause Musica"
-                    >
-                      <Zap className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
-                  <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Sei su mobile: usa il Wi-Fi per evitare blocchi di rete
-                  </p>
+            <div className="flex flex-col gap-1 items-center sm:items-start">
+              <div className="flex items-center gap-2">
+                <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-sm">ID Stanza: <span className="font-black text-emerald-500">{myPeerId || 'Inizializzazione...'}</span></p>
+                <div className={cn(
+                  "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse",
+                  myPeerId ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
+                )} title={myPeerId ? "Connesso al server" : "Connessione..."} />
+                {myPeerId && (
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(myPeerId);
+                      alert("ID Stanza copiato!");
+                    }}
+                    className="p-1 sm:p-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-emerald-500 transition-all"
+                    title="Copia ID"
+                  >
+                    <Copy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  </button>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full lg:w-auto">
-            <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-            <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 w-full lg:w-auto">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-center">
+              <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+              <TimerDisplay seconds={gameState.timer} active={gameState.timerActive} endTime={gameState.timerEndTime} />
+            </div>
+            <div className="flex flex-row sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               {(gameState.phase.startsWith('QUAL_') || gameState.phase.startsWith('SEMIS_') || gameState.phase === 'FINAL') && gameState.phase !== 'QUAL_RESULTS' && (
                 <>
-                  <button onClick={() => sendAction('NEXT_QUESTION')} className="px-6 py-3 bg-emerald-500 text-zinc-950 font-black rounded-2xl hover:bg-emerald-400 transition-all text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                    Prossima Domanda
+                  <button onClick={() => sendAction('NEXT_QUESTION')} className="flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 bg-emerald-500 text-zinc-950 font-black rounded-xl sm:rounded-2xl hover:bg-emerald-400 transition-all text-[10px] sm:text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                    Prossima
                   </button>
-                  <button onClick={() => sendAction('TOGGLE_QUESTION')} className={cn("px-6 py-3 font-black rounded-2xl transition-all text-sm", gameState.isQuestionActive ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20")}>
-                    {gameState.isQuestionActive ? 'Ferma Tempo' : 'Attiva Domanda'}
+                  <button onClick={() => sendAction('TOGGLE_QUESTION')} className={cn("flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 font-black rounded-xl sm:rounded-2xl transition-all text-[10px] sm:text-sm", gameState.isQuestionActive ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20")}>
+                    {gameState.isQuestionActive ? 'Ferma' : 'Attiva'}
                   </button>
                 </>
               )}
@@ -2070,7 +2135,7 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
           </div>
         </section>
 
-        {/* Music Management Section - Disabled as per request */}
+        {/* Music Management Section */}
         <section className="bg-zinc-50 border border-zinc-200 rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -2079,13 +2144,14 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
                 Musica per la Leaderboard
               </h3>
               <p className="text-[10px] text-zinc-500">
-                Musica predefinita impostata. Verrà riprodotta automaticamente durante il timer.
+                Inserisci un link diretto a un file MP3 (es. https://sito.it/musica.mp3). I link di YouTube non sono supportati direttamente.
               </p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
-                  const audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3');
+                  const audio = new Audio(gameState.leaderboardMusicUrl || '/quiz_music.mp3');
+                  audio.volume = 0.35;
                   audio.play().catch(e => alert("Errore riproduzione: " + e.message));
                   setTimeout(() => {
                     audio.pause();
@@ -2096,11 +2162,42 @@ function AdminDashboard({ gameState, playSyntheticSound, onBack, myPeerId, theme
               >
                 Prova Audio (5s)
               </button>
-              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
-                ATTIVA
-              </span>
             </div>
           </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Incolla qui il link diretto all'MP3..."
+              className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-2 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const url = (e.target as HTMLInputElement).value;
+                  if (url.trim()) {
+                    sendAction('SET_LEADERBOARD_MUSIC', { url: url.trim() });
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }
+              }}
+            />
+            <button
+              onClick={(e) => {
+                const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                const url = input.value;
+                if (url.trim()) {
+                  sendAction('SET_LEADERBOARD_MUSIC', { url: url.trim() });
+                  input.value = '';
+                }
+              }}
+              className="px-4 py-2 bg-zinc-950 text-white rounded-xl font-bold text-xs hover:bg-zinc-800 transition-all shadow-sm"
+            >
+              Salva
+            </button>
+          </div>
+          {gameState.leaderboardMusicUrl && (
+            <p className="text-[10px] text-zinc-400 truncate">
+              URL Attuale: <span className="text-emerald-500 font-mono">{gameState.leaderboardMusicUrl}</span>
+            </p>
+          )}
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2448,14 +2545,14 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="space-y-8"
+              className="space-y-4 sm:space-y-8"
             >
-              <div className="w-32 h-32 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
-                <Trophy className="w-16 h-16 text-amber-500" />
+              <div className="w-20 h-20 sm:w-32 sm:h-32 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
+                <Trophy className="w-10 h-10 sm:w-16 sm:h-16 text-amber-500" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-4xl sm:text-6xl font-black text-zinc-950">Round {gameState.round} terminato</h2>
-                <p className="text-xl sm:text-2xl text-zinc-500 font-medium">
+                <h2 className="text-3xl sm:text-6xl font-black text-zinc-950">Round {gameState.round} terminato</h2>
+                <p className="text-lg sm:text-2xl text-zinc-500 font-medium">
                   Questo round è stato vinto dalla squadra:
                 </p>
               </div>
@@ -2463,7 +2560,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                 initial={{ scale: 0.9 }}
                 animate={{ scale: 1.1 }}
                 transition={{ repeat: Infinity, duration: 1, repeatType: 'reverse' }}
-                className="text-5xl sm:text-8xl font-black text-amber-500 drop-shadow-[0_0_30px_rgba(245,158,11,0.3)]"
+                className="text-4xl sm:text-8xl font-black text-amber-500 drop-shadow-[0_0_30px_rgba(245,158,11,0.3)]"
               >
                 {gameState.roundWinner}
               </motion.div>
@@ -2483,16 +2580,16 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="space-y-8"
+              className="space-y-4 sm:space-y-8"
             >
-              <div className="w-32 h-32 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+              <div className="w-20 h-20 sm:w-32 sm:h-32 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-10 h-10 sm:w-16 sm:h-16 text-emerald-500" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-4xl sm:text-7xl font-black text-zinc-950 uppercase tracking-tight">
+                <h2 className="text-3xl sm:text-7xl font-black text-zinc-950 uppercase tracking-tight">
                   Tutte le squadre hanno risposto
                 </h2>
-                <p className="text-xl sm:text-2xl text-zinc-400 font-bold uppercase tracking-widest animate-pulse">
+                <p className="text-lg sm:text-2xl text-zinc-400 font-bold uppercase tracking-widest animate-pulse">
                   Preparatevi per il prossimo round...
                 </p>
               </div>
@@ -2519,16 +2616,16 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className={cn(
-                  "text-[15rem] sm:text-[25rem] font-black drop-shadow-[0_0_50px_rgba(16,185,129,0.5)] leading-none",
+                  "text-[8rem] sm:text-[25rem] font-black drop-shadow-[0_0_50px_rgba(16,185,129,0.5)] leading-none",
                   gameState.countdownType === 'QUESTION_ENDING' ? "text-red-500" : "text-emerald-500"
                 )}
               >
                 <CountdownDisplay seconds={gameState.countdown} active={gameState.countdownActive} endTime={gameState.countdownEndTime} />
               </motion.div>
-              <h2 className="text-4xl sm:text-6xl font-black text-zinc-300 uppercase tracking-[0.3em]">
+              <h2 className="text-2xl sm:text-6xl font-black text-zinc-300 uppercase tracking-[0.1em] sm:tracking-[0.3em]">
                 {gameState.countdownType === 'QUESTION_ENDING' ? 'Fine Domanda' : 'Prossima Domanda'}
               </h2>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-400 uppercase tracking-widest animate-pulse">
+              <p className="text-lg sm:text-2xl font-bold text-zinc-400 uppercase tracking-widest animate-pulse">
                 {gameState.countdownType === 'QUESTION_ENDING' ? 'Tempo quasi scaduto!' : 'Preparatevi...'}
               </p>
             </motion.div>
@@ -2557,20 +2654,20 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
         </div>
         
         <div className="space-y-4">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 uppercase">
+          <h1 className="text-2xl sm:text-6xl font-black tracking-tight px-4 text-zinc-950 dark:text-white uppercase">
             {gameState.phase === 'QUAL_TIEBREAKER' ? 'Spareggio Qualificazioni' : 
              gameState.phase.startsWith('QUAL_') ? 'Qualificazioni' : 'Classifica Real-Time'}
           </h1>
           {(isAdmin ? myPeerId : roomId) && (
-            <div className="flex flex-wrap items-center justify-center gap-3 mx-auto w-fit">
-              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Stanza:</p>
-                <p className="text-xs font-black text-emerald-500">{isAdmin ? myPeerId : roomId}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mx-auto w-fit px-4">
+              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl shadow-sm">
+                <p className="text-[8px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Stanza:</p>
+                <p className="text-[10px] sm:text-xs font-black text-emerald-500">{isAdmin ? myPeerId : roomId}</p>
               </div>
-              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Musica:</p>
-                <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">Predefinita</p>
+              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl shadow-sm">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-[8px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Musica:</p>
+                <p className="text-[10px] sm:text-xs font-black text-zinc-600 dark:text-zinc-400">Predefinita</p>
                 <button 
                   onClick={() => {
                     if (leaderboardMusicRef.current) {
@@ -2584,22 +2681,17 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                       }
                     }
                   }}
-                  className="ml-1 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                  className="ml-1 p-0.5 sm:p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
                   title="Play/Pause Manuale"
                 >
-                  <Zap className="w-3 h-3 text-emerald-500" />
+                  <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-500" />
                 </button>
-              </div>
-              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Sync:</p>
-                <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">Live</p>
               </div>
             </div>
           )}
-            <div className="flex flex-col items-center gap-1">
-            <p className="text-emerald-500 text-sm sm:text-lg font-black uppercase tracking-[0.3em]">Round {gameState.round} | {roundType}</p>
-            <p className="text-zinc-400 text-xs sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}{gameState.phase.startsWith('QUAL_') ? '/10' : ''}</p>
+            <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+            <p className="text-emerald-500 text-xs sm:text-lg font-black uppercase tracking-[0.2em] sm:tracking-[0.3em]">Round {gameState.round} | {roundType}</p>
+            <p className="text-zinc-400 text-[10px] sm:text-sm font-bold uppercase tracking-widest">Domanda {gameState.currentQuestionIndex}{gameState.phase.startsWith('QUAL_') ? '/10' : ''}</p>
           </div>
         </div>
       </motion.div>
@@ -2763,9 +2855,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   </div>
                 )}
 
-                <div className="flex items-center gap-6 relative z-10">
+                <div className="flex items-center gap-3 sm:gap-6 relative z-10">
                   <div className={cn(
-                    "w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black shadow-inner",
+                    "w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-black shadow-inner",
                     isFirst ? "bg-amber-500 text-zinc-950" :
                     isSecond ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300" :
                     isThird ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400" :
@@ -2773,12 +2865,12 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   )}>
                     {isFirst ? (
                       <div className="relative">
-                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-amber-500">
+                        <div className="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 text-amber-500">
                           <motion.div
                             animate={{ rotate: [0, -10, 10, 0] }}
                             transition={{ repeat: Infinity, duration: 3 }}
                           >
-                            <Trophy className="w-6 h-6" />
+                            <Trophy className="w-4 h-4 sm:w-6 sm:h-6" />
                           </motion.div>
                         </div>
                         1
@@ -2788,7 +2880,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   
                   <div>
                     <h3 className={cn(
-                      "text-2xl font-black tracking-tight flex items-center gap-2",
+                      "text-lg sm:text-2xl font-black tracking-tight flex items-center gap-2",
                       isFirst ? "text-amber-600 dark:text-amber-500" : "text-zinc-950 dark:text-white"
                     )}>
                       {team.name}
@@ -2799,16 +2891,16 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                           className="text-amber-500"
                           title="Risposta Veloce! (+3 punti)"
                         >
-                          <Zap className="w-5 h-5 fill-current" />
+                          <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                         </motion.span>
                       )}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
                       <div className={cn(
-                        "w-2 h-2 rounded-full",
+                        "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
                         team.status === 'eliminata' ? "bg-red-500" : "bg-emerald-500"
                       )} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                      <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                         {team.status}
                       </span>
                     </div>
@@ -2816,9 +2908,9 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                 </div>
 
                 <div className="text-right relative z-10">
-                  <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Punteggio</p>
+                  <p className="text-[8px] sm:text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5 sm:mb-1">Punti</p>
                   <p className={cn(
-                    "text-4xl font-black",
+                    "text-2xl sm:text-4xl font-black",
                     isFirst ? "text-amber-600 dark:text-amber-500" : "text-zinc-950 dark:text-white"
                   )}>
                     {team.score}

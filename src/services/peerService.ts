@@ -540,7 +540,8 @@ class PeerService {
         break;
         
       case 'SET_LEADERBOARD_MUSIC':
-        // Disabled as per request
+        this.gameState.leaderboardMusicUrl = data.payload.url;
+        this.broadcast({ type: 'STATE_UPDATE', state: this.gameState });
         break;
 
       case 'DELETE_LEADERBOARD_MUSIC':
