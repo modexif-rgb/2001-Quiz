@@ -613,7 +613,10 @@ class PeerService {
           this.gameState.selectedAnswers = {};
           this.gameState.answerTimes = {};
           this.gameState.questionStartTime = undefined;
-          this.gameState.teams.forEach(t => t.lastAnswerFast = false);
+          this.gameState.teams.forEach(t => {
+            t.lastAnswerFast = false;
+            t.lastAnswerCorrect = false;
+          });
           this.gameState.allTeamsAnswered = false;
           this.updateCurrentQuestion(payload?.questionId);
           this.startCountdown('NEXT_QUESTION');
@@ -803,7 +806,12 @@ class PeerService {
         this.gameState.currentQuestionIndex = 0;
         this.gameState.isQuestionActive = false;
         this.gameState.isQuestionFinished = false;
-        this.gameState.teams.forEach(t => { t.score = 0; t.status = 'in gara'; });
+        this.gameState.teams.forEach(t => { 
+          t.score = 0; 
+          t.status = 'in gara'; 
+          t.lastAnswerFast = false;
+          t.lastAnswerCorrect = false;
+        });
         this.gameState.selectedAnswers = {};
         this.gameState.answerTimes = {};
         this.gameState.allTeamsAnswered = false;
@@ -935,6 +943,10 @@ class PeerService {
     this.gameState.buzzes = [];
     this.gameState.selectedAnswers = {};
     this.gameState.answerTimes = {};
+    this.gameState.teams.forEach(t => {
+      t.lastAnswerFast = false;
+      t.lastAnswerCorrect = false;
+    });
     this.updateCurrentQuestion();
     this.stopTimer();
     this.startCountdown('NEXT_QUESTION');
@@ -950,16 +962,17 @@ class PeerService {
       const timeTaken = this.gameState!.answerTimes?.[team.id] || 999;
 
       if (selectedIdx !== undefined) {
-        // Update fast answer indicator based on time taken
-        team.lastAnswerFast = timeTaken <= 5;
-
         if (selectedIdx === correctIdx) {
+          team.lastAnswerCorrect = true;
+          team.lastAnswerFast = timeTaken <= 5;
           let points = 10;
           if (isQual && timeTaken <= 5) {
             points += 3;
           }
           team.score += points;
         } else {
+          team.lastAnswerCorrect = false;
+          team.lastAnswerFast = false;
           team.score = Math.max(0, team.score - 5);
         }
       }

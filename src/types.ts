@@ -6,6 +6,7 @@ export interface Team {
   score: number;
   status: TeamStatus;
   lastAnswerFast?: boolean;
+  lastAnswerCorrect?: boolean;
 }
 
 export type GamePhase = 'LOBBY' | 'QUAL_1' | 'QUAL_2' | 'QUAL_3' | 'QUAL_TIEBREAKER' | 'QUAL_RESULTS' | 'SEMIS_1' | 'SEMIS_2' | 'FINAL' | 'FINISHED';

@@ -1492,16 +1492,46 @@ export default function App() {
                           </div>
 
                           {gameState.isQuestionFinished && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="p-6 bg-zinc-950 text-white rounded-3xl shadow-xl border border-zinc-800"
-                            >
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
-                              <p className="text-2xl font-black">
-                                {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
-                              </p>
-                            </motion.div>
+                            <div className="space-y-4">
+                              {gameState.selectedAnswers[myTeam.id] === gameState.currentQuestion.correctAnswer ? (
+                                <motion.div
+                                  initial={{ scale: 0.5, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  className="p-6 bg-emerald-500 text-zinc-950 rounded-3xl shadow-xl flex flex-col items-center gap-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-6 h-6" />
+                                    <p className="text-2xl font-black uppercase tracking-tighter">Risposta Corretta!</p>
+                                    {gameState.answerTimes[myTeam.id] <= 5 && <Zap className="w-6 h-6 fill-current animate-pulse" />}
+                                  </div>
+                                  {gameState.answerTimes[myTeam.id] <= 5 && (
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Bonus Velocità +3 Punti!</p>
+                                  )}
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  initial={{ scale: 0.5, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  className="p-6 bg-red-500 text-white rounded-3xl shadow-xl flex flex-col items-center gap-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <XCircle className="w-6 h-6" />
+                                    <p className="text-2xl font-black uppercase tracking-tighter">Risposta Errata</p>
+                                  </div>
+                                </motion.div>
+                              )}
+                              
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-6 bg-zinc-950 text-white rounded-3xl shadow-xl border border-zinc-800"
+                              >
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                                <p className="text-2xl font-black">
+                                  {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                                </p>
+                              </motion.div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -2763,7 +2793,7 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   {gameState.currentQuestion.options && (
                     <div className="grid grid-cols-1 gap-3 mt-8">
                       {gameState.currentQuestion.options.map((option, idx) => {
-                        const isCorrect = gameState.phase === 'QUAL_RESULTS' && idx === gameState.currentQuestion?.correctAnswer;
+                        const isCorrect = gameState.isQuestionFinished && idx === gameState.currentQuestion?.correctAnswer;
                         return (
                           <div 
                             key={idx}
@@ -2788,16 +2818,33 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                   )}
 
                   {gameState.isQuestionFinished && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 p-6 bg-zinc-950 dark:bg-zinc-800 text-white rounded-3xl border border-zinc-800"
-                    >
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
-                      <p className="text-2xl sm:text-3xl font-black">
-                        {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
-                      </p>
-                    </motion.div>
+                    <div className="space-y-4 mt-6">
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-6 bg-zinc-950 dark:bg-zinc-800 text-white rounded-3xl border border-zinc-800"
+                      >
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-emerald-500">Risposta Corretta</p>
+                        <p className="text-2xl sm:text-3xl font-black">
+                          {String.fromCharCode(65 + (gameState.currentQuestion.correctAnswer ?? 0))}: {gameState.currentQuestion.options?.[gameState.currentQuestion.correctAnswer ?? 0]}
+                        </p>
+                      </motion.div>
+                      
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {gameState.teams.filter(t => gameState.selectedAnswers[t.id] === gameState.currentQuestion?.correctAnswer).map(team => (
+                          <motion.div
+                            key={team.id}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="flex items-center gap-2 bg-emerald-500 text-zinc-950 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            {team.name}
+                            {team.lastAnswerFast && <Zap className="w-3 h-3 fill-current animate-pulse" />}
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -2874,15 +2921,15 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
                       isFirst ? "text-amber-600 dark:text-amber-500" : "text-zinc-950 dark:text-white"
                     )}>
                       {team.name}
-                      {team.lastAnswerFast && (
-                        <motion.span
-                          initial={{ scale: 0, rotate: -45 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          className="text-amber-500"
-                          title="Risposta Veloce! (+3 punti)"
+                      {gameState.isQuestionFinished && team.lastAnswerCorrect && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="flex items-center gap-1 bg-emerald-500 text-zinc-950 px-2 py-0.5 rounded-lg text-[10px] uppercase tracking-wider"
                         >
-                          <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-                        </motion.span>
+                          Corretto
+                          {team.lastAnswerFast && <Zap className="w-3 h-3 fill-current" />}
+                        </motion.div>
                       )}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
