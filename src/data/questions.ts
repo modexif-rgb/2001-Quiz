@@ -1,25 +1,25 @@
 import { QuestionFolder } from '../types';
-import { culturaGeneraleQuestions } from './culturaGenerale';
-import { artiQuestions } from './arti';
-import { storiaGeopoliticaQuestions } from './storiaGeopolitica';
-import { pdf4Questions } from './pdf4';
+import { qual1Questions } from './qual1';
+import { qual2Questions } from './qual2';
+import { qual3Questions } from './qual3';
+import { buzzQuestions } from './buzz';
 
 export const PRELOADED_QUESTIONS: QuestionFolder[] = [
   {
-    name: "Quiz_CulturaGenerale",
-    questions: culturaGeneraleQuestions
+    name: "Qualificazioni Round 1",
+    questions: qual1Questions
   },
   {
-    name: "Quiz_Arti",
-    questions: artiQuestions
+    name: "Qualificazioni Round 2",
+    questions: qual2Questions
   },
   {
-    name: "Quiz_Storia_Geopolitica",
-    questions: storiaGeopoliticaQuestions
+    name: "Qualificazioni Round 3",
+    questions: qual3Questions
   },
   {
-    name: "PDF 4",
-    questions: pdf4Questions
+    name: "PDF Buzz",
+    questions: buzzQuestions
   }
 ];
 

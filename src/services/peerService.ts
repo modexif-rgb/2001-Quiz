@@ -289,17 +289,19 @@ class PeerService {
     const currentPhase = this.gameState.phase;
 
     if (currentPhase === 'LOBBY' || currentPhase === 'QUAL_1') {
-      newQuestions = getQuestionsFromSource('Quiz_CulturaGenerale', 10);
+      newQuestions = getQuestionsFromSource('Qualificazioni Round 1', 10);
     } else if (currentPhase === 'QUAL_2') {
-      newQuestions = getQuestionsFromSource('Quiz_Arti', 10);
+      newQuestions = getQuestionsFromSource('Qualificazioni Round 2', 10);
     } else if (currentPhase === 'QUAL_3') {
-      newQuestions = getQuestionsFromSource('Quiz_Storia_Geopolitica', 10);
+      newQuestions = getQuestionsFromSource('Qualificazioni Round 3', 10);
+    } else if (currentPhase === 'QUAL_TIEBREAKER' || currentPhase === 'SEMIS_1' || currentPhase === 'SEMIS_2' || currentPhase === 'FINAL') {
+      newQuestions = getQuestionsFromSource('PDF Buzz', 20);
     } else {
-      // Mixed for Semis and Finals
-      const q1 = getQuestionsFromSource('Quiz_CulturaGenerale', 2);
-      const q2 = getQuestionsFromSource('Quiz_Arti', 3);
-      const q3 = getQuestionsFromSource('Quiz_Storia_Geopolitica', 2);
-      const q4 = getQuestionsFromSource('PDF 4', 3);
+      // Mixed for other phases if any
+      const q1 = getQuestionsFromSource('Qualificazioni Round 1', 2);
+      const q2 = getQuestionsFromSource('Qualificazioni Round 2', 3);
+      const q3 = getQuestionsFromSource('Qualificazioni Round 3', 2);
+      const q4 = getQuestionsFromSource('PDF Buzz', 3);
       newQuestions = [...q1, ...q2, ...q3, ...q4];
       newQuestions.sort(() => Math.random() - 0.5);
     }
@@ -810,6 +812,7 @@ class PeerService {
         this.gameState.usedQuestionIds = [];
         this.gameState.showRoundWinner = false;
         this.gameState.round = 1;
+        this.fillQueueAutomatically();
         break;
       case 'DELETE_TEAM':
         this.gameState.teams = this.gameState.teams.filter(t => t.id !== payload.teamId);

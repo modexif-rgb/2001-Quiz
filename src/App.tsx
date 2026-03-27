@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { PRELOADED_QUESTIONS } from './data/questions';
+import { QUESTIONS } from './questions';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -748,19 +749,7 @@ export default function App() {
     round: 1,
     questionQueue: [],
     uploadedFiles: [],
-    allQuestions: PRELOADED_QUESTIONS.reduce((acc, folder) => {
-      // Map preloaded folders to phases or just a general pool
-      // For now, let's put them in a 'LIBRARY' phase or similar if needed
-      // But the app expects QUAL_1, QUAL_2, etc.
-      // We'll initialize them as empty and let the admin pick
-      return acc;
-    }, {
-      QUAL_1: [],
-      QUAL_2: [],
-      QUAL_3: [],
-      SEMIS: [],
-      FINAL: [],
-    }),
+    allQuestions: QUESTIONS,
     leaderboardMusicUrl: '/quiz_music.mp3',
     semisMatches: null,
     finalMatch: null,
@@ -2465,7 +2454,8 @@ function Leaderboard({ gameState, audioEnabled, playSyntheticSound, onBack, myPe
 
   const roundType = gameState.phase === 'QUAL_1' ? 'Cultura Generale' : 
                     gameState.phase === 'QUAL_2' ? 'Arti' : 
-                    gameState.phase === 'QUAL_3' ? 'Storia e Geopolitica' : 
+                    gameState.phase === 'QUAL_3' ? 'Storia' : 
+                    gameState.phase === 'QUAL_TIEBREAKER' ? 'Spareggio' : 
                     gameState.phase === 'SEMIS_1' ? 'Semifinale 1' : 
                     gameState.phase === 'SEMIS_2' ? 'Semifinale 2' : 
                     gameState.phase === 'FINAL' ? 'Finale' : 'Gara';
